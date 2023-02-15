@@ -2,81 +2,167 @@ package provider
 
 import (
 	"context"
-	"net/http"
-
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
+	"os"
 )
 
-// Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &ScaffoldingProvider{}
+var defaultEndpoint = "https://api.tabular.io"
+var defaultTokenEndpoint = "https://api.tabular.io/ws/v1/oauth/tokens"
 
-// ScaffoldingProvider defines the provider implementation.
-type ScaffoldingProvider struct {
-	// version is set to the provider version on release, "dev" when the
-	// provider is built and ran locally, and "test" when running acceptance
-	// testing.
-	version string
+var _ provider.Provider = &TabularProvider{}
+
+type TabularProvider struct {
 }
 
-// ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+func (p *TabularProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "tabular"
 }
 
-func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "scaffolding"
-	resp.Version = p.version
-}
-
-func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *TabularProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+	_, credentialSet := os.LookupEnv("TABULAR_CREDENTIAL")
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"token_endpoint": schema.StringAttribute{
+				Optional: true,
+			},
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
-				Optional:            true,
+				Optional: true,
+			},
+			"credential": schema.StringAttribute{
+				MarkdownDescription: "Tabular Credential",
+				Required:            !credentialSet,
+				Optional:            credentialSet,
+				Sensitive:           true,
+			},
+			"organization_id": schema.StringAttribute{
+				MarkdownDescription: "Tabular Organization ID",
+				Required:            true,
 			},
 		},
 	}
 }
 
-func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data ScaffoldingProviderModel
+type TabularProviderModel struct {
+	TokenEndpoint  types.String `tfsdk:"token_endpoint"`
+	Endpoint       types.String `tfsdk:"endpoint"`
+	Credential     types.String `tfsdk:"credential"`
+	OrganizationId types.String `tfsdk:"organization_id"`
+}
 
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+func ensureProviderConfigOption(
+	attr types.String,
+	attrName string,
+	envVar string,
+	defaultValue *string,
+) (*string, error) {
+	if attr.IsUnknown() {
+		return nil, fmt.Errorf("%s depends on values that cannot be known until apply time", attrName)
+	} else if attr.ValueString() == "" {
+		value, valueSet := os.LookupEnv(envVar)
+		if !valueSet {
+			if defaultValue != nil {
+				return defaultValue, nil
+			} else {
+				return nil, fmt.Errorf(
+					"%s must have a value. Either set %s in provider config or set the %s enviornment variable",
+					attrName, attrName, envVar,
+				)
+			}
+		} else {
+			return &value, nil
+		}
+	} else {
+		value := attr.ValueString()
+		return &value, nil
+	}
+}
 
+func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var config TabularProviderModel
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	endpoint, err := ensureProviderConfigOption(
+		config.Endpoint,
+		"endpoint",
+		"TABULAR_ENDPOINT",
+		&defaultEndpoint,
+	)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("endpoint"), "Endpoint Invalid", err.Error())
+	}
 
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	tokenEndpoint, err := ensureProviderConfigOption(
+		config.TokenEndpoint,
+		"token_endpoint",
+		"TABULAR_TOKEN_ENDPOINT",
+		&defaultTokenEndpoint,
+	)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("token_endpoint"), "Token Endpoint Invalid", err.Error())
+	}
+
+	orgId, err := ensureProviderConfigOption(
+		config.OrganizationId,
+		"organization_id",
+		"TABULAR_ORGANIZATION_ID",
+		nil,
+	)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("organization_id"), "Organization ID Invalid", err.Error())
+	}
+
+	credential, err := ensureProviderConfigOption(
+		config.Credential,
+		"credential",
+		"TABULAR_CREDENTIAL",
+		nil,
+	)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("credential"), "Credential Invalid", err.Error())
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	client, err := tabular.NewClient(
+		*endpoint,
+		*tokenEndpoint,
+		*orgId,
+		*credential,
+	)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed setting up Tabular Client", err.Error())
+	}
+
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
 
-func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
+		NewRoleResource,
 	}
 }
 
-func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *TabularProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewExampleDataSource,
+		NewRoleDataSource,
 	}
 }
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &ScaffoldingProvider{
-			version: version,
-		}
+		return &TabularProvider{}
 	}
 }

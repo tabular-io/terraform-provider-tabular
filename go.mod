@@ -1,4 +1,4 @@
-module github.com/hashicorp/terraform-provider-scaffolding-framework
+module github.com/tabular-io/terraform-provider-tabular
 
 go 1.18
 

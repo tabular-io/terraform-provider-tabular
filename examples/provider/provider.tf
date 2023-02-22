@@ -15,7 +15,7 @@ data "tabular_role" "data_ex" {
 }
 
 resource "tabular_role" "example" {
-  name ="Example Role"
+  name = "Example Role"
 }
 
 output "role_id" {

@@ -28,22 +28,25 @@ func (p *TabularProvider) Metadata(ctx context.Context, req provider.MetadataReq
 func (p *TabularProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	_, credentialSet := os.LookupEnv("TABULAR_CREDENTIAL")
 	resp.Schema = schema.Schema{
+		Description: "",
 		Attributes: map[string]schema.Attribute{
 			"token_endpoint": schema.StringAttribute{
-				Optional: true,
+				Description: "Endpoint for authentication. May also be provided via TABULAR_TOKEN_ENDPOINT environment variable.",
+				Optional:    true,
 			},
 			"endpoint": schema.StringAttribute{
-				Optional: true,
+				Description: "Endpoint for Tabular API. May also be provided via TABULAR_ENDPOINT environment variable.",
+				Optional:    true,
 			},
 			"credential": schema.StringAttribute{
-				MarkdownDescription: "Tabular Credential",
-				Required:            !credentialSet,
-				Optional:            credentialSet,
-				Sensitive:           true,
+				Description: "Tabular Credential. May also be provided via TABULAR_CREDENTIAL environment variable.",
+				Required:    !credentialSet,
+				Optional:    credentialSet,
+				Sensitive:   true,
 			},
 			"organization_id": schema.StringAttribute{
-				MarkdownDescription: "Tabular Organization ID",
-				Required:            true,
+				Description: "Tabular Organization ID. May also be provided via TABULAR_ORGANIZATION_ID environment variable.",
+				Required:    true,
 			},
 		},
 	}

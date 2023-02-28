@@ -12,11 +12,10 @@ import (
 
 type Client struct {
 	Endpoint   string
-	OrgId      string
 	HTTPClient *http.Client
 }
 
-func NewClient(endpoint, tokenEndpoint, orgId, credential string) (*Client, error) {
+func NewClient(endpoint, tokenEndpoint, credential string) (*Client, error) {
 	parts := strings.SplitN(credential, ":", 2)
 	if len(parts) != 2 {
 		return nil, errors.New("bad credential provided")
@@ -30,22 +29,25 @@ func NewClient(endpoint, tokenEndpoint, orgId, credential string) (*Client, erro
 
 	client := Client{
 		Endpoint:   endpoint,
-		OrgId:      orgId,
 		HTTPClient: clientConfig.Client(context.Background()),
 	}
 	return &client, nil
 }
 
 type ClientError struct {
-	message  string
-	response http.Response
+	statusCode   int
+	responseBody string
+	response     http.Response
 }
 
 func (err *ClientError) Error() string {
-	return ""
+	return fmt.Sprintf("[%d] %s", err.statusCode, err.responseBody)
 }
 
 func (c *Client) doRequest(req *http.Request) ([]byte, error) {
+	if req.Body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -59,8 +61,9 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, &ClientError{
-			message:  fmt.Sprintf("Error Code: %d", resp.StatusCode),
-			response: *resp,
+			statusCode:   resp.StatusCode,
+			response:     *resp,
+			responseBody: string(body[:]),
 		}
 	}
 

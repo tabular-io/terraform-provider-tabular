@@ -5,10 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
-func (c *Client) GetRole(roleId string) (*Role, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/ws/v1/auth/roles/%s", c.Endpoint, roleId), nil)
+type CreateRoleRequest struct {
+	RoleName string `json:"roleName"`
+}
+
+type UpdateRoleRequest struct {
+	RoleName string `json:"roleName"`
+}
+
+func (c *Client) GetRole(roleName string) (*Role, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/ws/v1/grants/roles/%s", c.Endpoint, roleName), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -32,10 +41,6 @@ func (c *Client) GetRole(roleId string) (*Role, error) {
 	return &role, nil
 }
 
-type CreateRoleRequest struct {
-	RoleName string `json:"roleName"`
-}
-
 func (c *Client) CreateRole(name string) (*Role, error) {
 	reqBody, err := json.Marshal(CreateRoleRequest{
 		RoleName: name,
@@ -44,11 +49,10 @@ func (c *Client) CreateRole(name string) (*Role, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/ws/v1/auth/roles/organizations/%s", c.Endpoint, c.OrgId), bytes.NewReader(reqBody))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/ws/v1/grants/roles", c.Endpoint), bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
 	body, err := c.doRequest(req)
 	if err != nil {
@@ -64,13 +68,85 @@ func (c *Client) CreateRole(name string) (*Role, error) {
 	return &role, nil
 }
 
-func (c *Client) DeleteRole(id string) (err error) {
-	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/ws/v1/auth/roles/%s", c.Endpoint, id), nil)
+func (c *Client) RenameRole(roleName string, newRoleName string) (*Role, error) {
+	reqBody, err := json.Marshal(UpdateRoleRequest{
+		RoleName: newRoleName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/ws/v1/grants/roles/%s", c.Endpoint, roleName), bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := c.doRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var role Role
+	err = json.Unmarshal(body, &role)
+	if err != nil {
+		return nil, err
+	}
+
+	return &role, nil
+}
+
+func (c *Client) DeleteRole(roleName string, force bool) (err error) {
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/ws/v1/grants/roles/%s", c.Endpoint, roleName), nil)
+	query := req.URL.Query()
+	query.Add("force", strconv.FormatBool(force))
+	req.URL.RawQuery = query.Encode()
 	if err != nil {
 		return err
 	}
 
 	// TODO: Require flag to delete role with usage?
+	_, err = c.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	return
+}
+
+func (c *Client) AddRoleRelation(parentRoleName, childRoleName string) (err error) {
+	reqBody, err := json.Marshal(UpdateRoleRequest{
+		RoleName: childRoleName,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/ws/v1/grants/roles/%s/children", c.Endpoint, parentRoleName), bytes.NewReader(reqBody))
+	if err != nil {
+		return err
+	}
+
+	_, err = c.doRequest(req)
+	if err != nil {
+		return err
+	}
+
+	return
+}
+
+func (c *Client) DeleteRoleRelation(parentRoleName, childRoleName string) (err error) {
+	reqBody, err := json.Marshal(UpdateRoleRequest{
+		RoleName: childRoleName,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/ws/v1/grants/roles/%s/children", c.Endpoint, parentRoleName), bytes.NewReader(reqBody))
+	if err != nil {
+		return err
+	}
+
 	_, err = c.doRequest(req)
 	if err != nil {
 		return err

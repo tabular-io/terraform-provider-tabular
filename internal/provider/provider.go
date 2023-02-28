@@ -28,32 +28,30 @@ func (p *TabularProvider) Metadata(ctx context.Context, req provider.MetadataReq
 func (p *TabularProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	_, credentialSet := os.LookupEnv("TABULAR_CREDENTIAL")
 	resp.Schema = schema.Schema{
+		Description: "",
 		Attributes: map[string]schema.Attribute{
 			"token_endpoint": schema.StringAttribute{
-				Optional: true,
+				Description: "Endpoint for authentication. May also be provided via TABULAR_TOKEN_ENDPOINT environment variable.",
+				Optional:    true,
 			},
 			"endpoint": schema.StringAttribute{
-				Optional: true,
+				Description: "Endpoint for Tabular API. May also be provided via TABULAR_ENDPOINT environment variable.",
+				Optional:    true,
 			},
 			"credential": schema.StringAttribute{
-				MarkdownDescription: "Tabular Credential",
-				Required:            !credentialSet,
-				Optional:            credentialSet,
-				Sensitive:           true,
-			},
-			"organization_id": schema.StringAttribute{
-				MarkdownDescription: "Tabular Organization ID",
-				Required:            true,
+				Description: "Tabular Credential. May also be provided via TABULAR_CREDENTIAL environment variable.",
+				Required:    !credentialSet,
+				Optional:    credentialSet,
+				Sensitive:   true,
 			},
 		},
 	}
 }
 
 type TabularProviderModel struct {
-	TokenEndpoint  types.String `tfsdk:"token_endpoint"`
-	Endpoint       types.String `tfsdk:"endpoint"`
-	Credential     types.String `tfsdk:"credential"`
-	OrganizationId types.String `tfsdk:"organization_id"`
+	TokenEndpoint types.String `tfsdk:"token_endpoint"`
+	Endpoint      types.String `tfsdk:"endpoint"`
+	Credential    types.String `tfsdk:"credential"`
 }
 
 func ensureProviderConfigOption(
@@ -112,16 +110,6 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 		resp.Diagnostics.AddAttributeError(path.Root("token_endpoint"), "Token Endpoint Invalid", err.Error())
 	}
 
-	orgId, err := ensureProviderConfigOption(
-		config.OrganizationId,
-		"organization_id",
-		"TABULAR_ORGANIZATION_ID",
-		nil,
-	)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(path.Root("organization_id"), "Organization ID Invalid", err.Error())
-	}
-
 	credential, err := ensureProviderConfigOption(
 		config.Credential,
 		"credential",
@@ -138,7 +126,6 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 	client, err := tabular.NewClient(
 		*endpoint,
 		*tokenEndpoint,
-		*orgId,
 		*credential,
 	)
 	if err != nil {
@@ -152,6 +139,7 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewRoleResource,
+		NewRoleRelationshipResource,
 	}
 }
 

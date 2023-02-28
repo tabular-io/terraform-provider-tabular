@@ -24,8 +24,8 @@ type RoleDataSource struct {
 
 // RoleDataSourceModel describes the data source data model.
 type RoleDataSourceModel struct {
-	Id          types.String `tfsdk:"id"`
-	DisplayName types.String `tfsdk:"name"`
+	Id   types.String `tfsdk:"id"`
+	Name types.String `tfsdk:"name"`
 }
 
 func (d *RoleDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -40,11 +40,11 @@ func (d *RoleDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "ID",
-				Required:            true,
+				Computed:            true,
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Role Name",
-				Computed:            true,
+				Required:            true,
 			},
 		},
 	}
@@ -81,7 +81,7 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	role, err := d.client.GetRole(data.Id.ValueString())
+	role, err := d.client.GetRole(data.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Failed fetching role", err.Error())
 		return
@@ -92,7 +92,7 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 
 	data.Id = types.StringValue(role.Id)
-	data.DisplayName = types.StringValue(role.Name)
+	data.Name = types.StringValue(role.Name)
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log

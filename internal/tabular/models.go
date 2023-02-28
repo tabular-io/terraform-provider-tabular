@@ -5,9 +5,9 @@ type CreateRole struct {
 }
 
 type Role struct {
-	Id         string
-	Name       string
-	ExternalId *string
+	Id       string
+	Name     string
+	Children *[]Role
 }
 
 type RoleRelation struct {

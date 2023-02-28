@@ -25,5 +25,5 @@ resource "tabular_role" "example3" {
 
 resource "tabular_role_relationship" "inheritance" {
   parent_role_name = tabular_role.example.name
-  child_role_name  = tabular_role.example.name
+  child_role_name  = tabular_role.example2.name
 }

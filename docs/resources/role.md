@@ -21,7 +21,7 @@ A Tabular Role
 
 ### Optional
 
-- `external_id` (String) External ID
+- `force_destroy` (Boolean) Boolean that indicates the role should be destroyed even if it still has associations (e.g.user assignments, relations to other roles, etc). Defaults to false.
 
 ### Read-Only
 

@@ -17,10 +17,10 @@ Role data source
 
 ### Required
 
-- `id` (String) ID
+- `name` (String) Role Name
 
 ### Read-Only
 
-- `name` (String) Role Name
+- `id` (String) ID
 
 

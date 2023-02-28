@@ -21,24 +21,26 @@ terraform {
   }
 }
 
-provider "tabular" {
-  organization_id = "78a1a843-0fe6-4cb1-b9e3-4a5c04f1e48b"
-}
-
-data "tabular_role" "data_ex" {
-  id = "9990834b-41aa-4517-8f8d-0f31396b2f32"
-}
+provider "tabular" {}
 
 resource "tabular_role" "example" {
-  name = "Example Role"
+  name          = "Example Role 1"
+  force_destroy = true
 }
 
-output "role_id" {
-  value = tabular_role.example.name
+resource "tabular_role" "example2" {
+  name          = "Example Role 2"
+  force_destroy = true
 }
 
-output "data_role_name" {
-  value = data.tabular_role.data_ex.name
+resource "tabular_role" "example3" {
+  name          = "Example Role 3"
+  force_destroy = true
+}
+
+resource "tabular_role_relationship" "inheritance" {
+  parent_role_name = tabular_role.example.name
+  child_role_name  = tabular_role.example.name
 }
 ```
 
@@ -47,10 +49,9 @@ output "data_role_name" {
 
 ### Required
 
-- `credential` (String, Sensitive) Tabular Credential
-- `organization_id` (String) Tabular Organization ID
+- `credential` (String, Sensitive) Tabular Credential. May also be provided via TABULAR_CREDENTIAL environment variable.
 
 ### Optional
 
-- `endpoint` (String)
-- `token_endpoint` (String)
+- `endpoint` (String) Endpoint for Tabular API. May also be provided via TABULAR_ENDPOINT environment variable.
+- `token_endpoint` (String) Endpoint for authentication. May also be provided via TABULAR_TOKEN_ENDPOINT environment variable.

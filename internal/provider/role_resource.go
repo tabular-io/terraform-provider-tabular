@@ -26,6 +26,14 @@ func NewRoleResource() resource.Resource {
 	return &roleResource{}
 }
 
+func (r *roleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	r.client = req.ProviderData.(*tabular.Client)
+}
+
 type roleResourceModel struct {
 	Id           types.String `tfsdk:"id"`
 	Name         types.String `tfsdk:"name"`
@@ -58,14 +66,6 @@ func (r *roleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			},
 		},
 	}
-}
-
-func (r *roleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	r.client = req.ProviderData.(*tabular.Client)
 }
 
 func (r *roleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -20,4 +20,11 @@ Relationship between two roles
 - `child_role_name` (String) Child role name
 - `parent_role_name` (String) Parent role name
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# Role relationships can be imported with the `ParentRoleName/ChildRoleName` format
+terraform import tabular_role_relationship.inheritance "Example Role 1/Example Role 2"
+```

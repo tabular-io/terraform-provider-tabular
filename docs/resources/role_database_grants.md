@@ -26,4 +26,11 @@ Manages the grants a role has for a database.
 
 - `privileges_with_grant` (List of String)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# Role database grants can be imported with the `Warhouse ID/Database/RoleName` format
+terraform import tabular_role_database_grants.grants "fb0723be-72e7-414c-b060-0a4e3c6d8cdc/dirt/Example Role 1"
+```

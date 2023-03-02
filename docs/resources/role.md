@@ -27,4 +27,11 @@ A Tabular Role
 
 - `id` (String) Role ID (uuid)
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# Roles can be imported by specifiying their name
+terraform import tabular_role.example "Example Role 1"
+```

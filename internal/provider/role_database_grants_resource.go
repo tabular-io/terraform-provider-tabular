@@ -126,8 +126,14 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 
 	state.Privileges, diags = types.ListValueFrom(ctx, types.StringType, grants.Privileges)
 	resp.Diagnostics.Append(diags...)
-	state.PrivilegesWithGrant, diags = types.ListValueFrom(ctx, types.StringType, grants.PrivilegesWithGrant)
-	resp.Diagnostics.Append(diags...)
+
+	if grants.PrivilegesWithGrant == nil || len(grants.PrivilegesWithGrant) == 0 {
+		state.PrivilegesWithGrant = types.ListNull(types.StringType)
+	} else {
+		state.PrivilegesWithGrant, diags = types.ListValueFrom(ctx, types.StringType, grants.PrivilegesWithGrant)
+		resp.Diagnostics.Append(diags...)
+	}
+
 	if resp.Diagnostics.HasError() {
 		return
 	}

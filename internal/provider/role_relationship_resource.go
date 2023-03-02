@@ -25,6 +25,14 @@ func NewRoleRelationshipResource() resource.Resource {
 	return &roleRelationshipResource{}
 }
 
+func (r *roleRelationshipResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	r.client = req.ProviderData.(*tabular.Client)
+}
+
 type roleRelationshipModel struct {
 	ParentRoleName types.String `tfsdk:"parent_role_name"`
 	ChildRoleName  types.String `tfsdk:"child_role_name"`
@@ -54,14 +62,6 @@ func (r *roleRelationshipResource) Schema(ctx context.Context, req resource.Sche
 			},
 		},
 	}
-}
-
-func (r *roleRelationshipResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	r.client = req.ProviderData.(*tabular.Client)
 }
 
 func (r *roleRelationshipResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -143,8 +143,5 @@ func (r *roleRelationshipResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	resp.State.RemoveResource(ctx)
 }

@@ -16,7 +16,7 @@ type roleRef struct {
 type roleDatabaseGrantDetail struct {
 	Role      roleRef `json:"role"`
 	Privilege string  `json:"privilege"`
-	Grantable bool    `json:"grantable"`
+	WithGrant bool    `json:"withGrant"`
 }
 
 type changeRoleGrantRequest struct {
@@ -60,7 +60,7 @@ func (c *Client) GetRoleDatabaseGrants(warehouseId, database, roleName string) (
 	}
 	for _, g := range grantsResp {
 		if g.Role.Name == roleName {
-			if g.Grantable {
+			if g.WithGrant {
 				grants.PrivilegesWithGrant = append(grants.PrivilegesWithGrant, g.Privilege)
 			} else {
 				grants.Privileges = append(grants.Privileges, g.Privilege)

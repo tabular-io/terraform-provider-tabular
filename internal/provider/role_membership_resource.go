@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -98,9 +97,15 @@ func (r *roleMembershipResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	members := internal.Map(role.Members, func(m tabular.Member) string { return m.Email })
-	// TODO: Need update to endpoints exposing withGrant
-	state.AdminMembers, diags = types.SetValue(types.StringType, []attr.Value{})
+	adminMembers := internal.Map(
+		internal.Filter(role.Members, func(m tabular.Member) bool { return m.WithGrant }),
+		func(m tabular.Member) string { return m.Email },
+	)
+	members := internal.Map(
+		internal.Filter(role.Members, func(m tabular.Member) bool { return !m.WithGrant }),
+		func(m tabular.Member) string { return m.Email },
+	)
+	state.AdminMembers, diags = types.SetValueFrom(ctx, types.StringType, adminMembers)
 	resp.Diagnostics.Append(diags...)
 	state.Members, diags = types.SetValueFrom(ctx, types.StringType, members)
 	resp.Diagnostics.Append(diags...)

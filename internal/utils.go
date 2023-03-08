@@ -15,6 +15,16 @@ func Difference[E comparable](a, b []E) (diff []E) {
 	return
 }
 
+func Filter[T any](data []T, f func(T) bool) []T {
+	res := make([]T, 0)
+	for _, e := range data {
+		if f(e) {
+			res = append(res, e)
+		}
+	}
+	return res
+}
+
 func Map[T, U any](data []T, f func(T) U) []U {
 	res := make([]U, 0, len(data))
 

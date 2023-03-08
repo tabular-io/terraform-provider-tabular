@@ -14,8 +14,9 @@ type Role struct {
 }
 
 type Member struct {
-	Id    string
-	Email string
+	Id        string
+	Email     string
+	WithGrant bool
 }
 
 type RoleRelation struct {

@@ -16,6 +16,11 @@ type UpdateRoleRequest struct {
 	RoleName string `json:"roleName"`
 }
 
+type AddRoleMemberRequest struct {
+	MemberId string `json:"memberId"`
+	IsAdmin  bool   `json:"withGrant"`
+}
+
 func (c *Client) GetRole(roleName string) (*Role, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/ws/v1/grants/roles/%s", c.Endpoint, roleName), nil)
 	if err != nil {

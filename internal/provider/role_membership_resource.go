@@ -14,16 +14,17 @@ import (
 )
 
 var (
-	_ resource.Resource                = &roleMembershipResource{}
-	_ resource.ResourceWithConfigure   = &roleMembershipResource{}
-	_ resource.ResourceWithImportState = &roleMembershipResource{}
+	_ resource.Resource                   = &roleMembershipResource{}
+	_ resource.ResourceWithConfigure      = &roleMembershipResource{}
+	_ resource.ResourceWithImportState    = &roleMembershipResource{}
+	_ resource.ResourceWithValidateConfig = &roleMembershipResource{}
 )
 
 type roleMembershipResource struct {
 	client *tabular.Client
 }
 
-func NewroleMembershipResource() resource.Resource {
+func NewRoleMembershipResource() resource.Resource {
 	return &roleMembershipResource{}
 }
 
@@ -110,6 +111,27 @@ func (r *roleMembershipResource) Read(ctx context.Context, req resource.ReadRequ
 	state.Members, diags = types.SetValueFrom(ctx, types.StringType, members)
 	resp.Diagnostics.Append(diags...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *roleMembershipResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var plan roleMembershipModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if plan.AdminMembers.IsUnknown() || plan.AdminMembers.IsNull() || plan.Members.IsUnknown() || plan.Members.IsNull() {
+		return
+	}
+	var adminMemberEmails, memberEmails []string
+	resp.Diagnostics.Append(plan.AdminMembers.ElementsAs(ctx, &adminMemberEmails, false)...)
+	resp.Diagnostics.Append(plan.Members.ElementsAs(ctx, &memberEmails, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	intersection := internal.Intersection(adminMemberEmails, memberEmails)
+	if intersection != nil && len(intersection) > 0 {
+		resp.Diagnostics.AddError("Found members present in both admin_members and members", fmt.Sprintf("%s", intersection))
+	}
 }
 
 func (r *roleMembershipResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -212,6 +234,7 @@ func (r *roleMembershipResource) Update(ctx context.Context, req resource.Update
 
 	adminToRemove := internal.Difference(stateAdminMemberIds, planAdminMemberIds)
 	toRemove := internal.Difference(stateMemberIds, planMemberIds)
+	// TODO: do I need to dedupe removals? Are duplicates even possible?
 	err = r.client.DeleteRoleMembers(state.RoleName.ValueString(), append(adminToRemove, toRemove...))
 	if err != nil {
 		resp.Diagnostics.AddError("Error removing role members", err.Error())

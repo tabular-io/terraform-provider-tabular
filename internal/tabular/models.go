@@ -6,14 +6,16 @@ type Warehouse struct {
 	Region string
 }
 
-type CreateRole struct {
-	Name string
-}
-
 type Role struct {
 	Id       string
 	Name     string
-	Children *[]Role
+	Children []Role
+	Members  []Member
+}
+
+type Member struct {
+	Id    string
+	Email string
 }
 
 type RoleRelation struct {

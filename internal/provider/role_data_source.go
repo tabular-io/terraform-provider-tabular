@@ -6,12 +6,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ datasource.DataSource = &RoleDataSource{}
+var _ datasource.DataSourceWithConfigure = &RoleDataSource{}
 
 func NewRoleDataSource() datasource.DataSource {
 	return &RoleDataSource{}
@@ -72,9 +72,6 @@ func (d *RoleDataSource) Configure(ctx context.Context, req datasource.Configure
 
 func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data RoleDataSourceModel
-
-	tflog.Info(ctx, "Some log message!")
-	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -94,10 +91,5 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	data.Id = types.StringValue(role.Id)
 	data.Name = types.StringValue(role.Name)
 
-	// Write logs using the tflog package
-	// Documentation: https://terraform.io/plugin/log
-	tflog.Trace(ctx, "read a data source")
-
-	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

@@ -1,5 +1,11 @@
 package tabular
 
+type Warehouse struct {
+	Id     string
+	Name   string
+	Region string
+}
+
 type CreateRole struct {
 	Name string
 }

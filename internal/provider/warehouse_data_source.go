@@ -98,7 +98,7 @@ func (w *WarehouseDataSource) Read(ctx context.Context, req datasource.ReadReque
 	}
 
 	if !found {
-		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError("Warehouse not found", fmt.Sprintf("Could not find warhouse with name %s", targetName))
 		return
 	}
 

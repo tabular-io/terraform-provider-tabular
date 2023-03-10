@@ -6,6 +6,12 @@ type Warehouse struct {
 	Region string
 }
 
+type Database struct {
+	WarehouseId string
+	Namespace   []string
+	Properties  map[string]string
+}
+
 type CreateRole struct {
 	Name string
 }

@@ -104,7 +104,6 @@ func (c *Client) DeleteRole(roleName string, force bool) (err error) {
 		return err
 	}
 
-	// TODO: Require flag to delete role with usage?
 	_, err = c.doRequest(req)
 	if err != nil {
 		return err

@@ -18,13 +18,13 @@ Manages the grants a role has for a database.
 ### Required
 
 - `database` (String) Database Name
-- `privileges` (List of String)
+- `privileges` (List of String) Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE
 - `role_name` (String) Role Name
 - `warehouse_id` (String) Warehouse ID (uuid)
 
 ### Optional
 
-- `privileges_with_grant` (List of String)
+- `privileges_with_grant` (List of String) Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE
 
 ## Import
 

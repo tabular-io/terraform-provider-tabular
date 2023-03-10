@@ -77,11 +77,13 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 				Required:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.List{privilegeListValidator{}},
+				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
 			},
 			"privileges_with_grant": schema.ListAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.List{privilegeListValidator{}},
+				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
 			},
 		},
 	}

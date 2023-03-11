@@ -40,8 +40,8 @@ type roleDatabaseGrantsModel struct {
 	RoleName            types.String `tfsdk:"role_name"`
 	WarehouseId         types.String `tfsdk:"warehouse_id"`
 	Database            types.String `tfsdk:"database"`
-	Privileges          types.List   `tfsdk:"privileges"`
-	PrivilegesWithGrant types.List   `tfsdk:"privileges_with_grant"`
+	Privileges          types.Set    `tfsdk:"privileges"`
+	PrivilegesWithGrant types.Set    `tfsdk:"privileges_with_grant"`
 }
 
 func (r *roleDatabaseGrantsResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -73,16 +73,16 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"privileges": schema.ListAttribute{
+			"privileges": schema.SetAttribute{
 				Required:    true,
 				ElementType: types.StringType,
-				Validators:  []validator.List{privilegeListValidator{}},
+				Validators:  []validator.Set{privilegeSetValidator{}},
 				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
 			},
-			"privileges_with_grant": schema.ListAttribute{
+			"privileges_with_grant": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Validators:  []validator.List{privilegeListValidator{}},
+				Validators:  []validator.Set{privilegeSetValidator{}},
 				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
 			},
 		},
@@ -98,8 +98,8 @@ func (r *roleDatabaseGrantsResource) ImportState(ctx context.Context, req resour
 		WarehouseId:         types.StringValue(parts[0]),
 		Database:            types.StringValue(parts[1]),
 		RoleName:            types.StringValue(parts[2]),
-		Privileges:          types.ListNull(types.StringType),
-		PrivilegesWithGrant: types.ListNull(types.StringType),
+		Privileges:          types.SetUnknown(types.StringType),
+		PrivilegesWithGrant: types.SetUnknown(types.StringType),
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
@@ -126,13 +126,13 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	state.Privileges, diags = types.ListValueFrom(ctx, types.StringType, grants.Privileges)
+	state.Privileges, diags = types.SetValueFrom(ctx, types.StringType, grants.Privileges)
 	resp.Diagnostics.Append(diags...)
 
 	if grants.PrivilegesWithGrant == nil || len(grants.PrivilegesWithGrant) == 0 {
-		state.PrivilegesWithGrant = types.ListNull(types.StringType)
+		state.PrivilegesWithGrant = types.SetNull(types.StringType)
 	} else {
-		state.PrivilegesWithGrant, diags = types.ListValueFrom(ctx, types.StringType, grants.PrivilegesWithGrant)
+		state.PrivilegesWithGrant, diags = types.SetValueFrom(ctx, types.StringType, grants.PrivilegesWithGrant)
 		resp.Diagnostics.Append(diags...)
 	}
 

@@ -9,23 +9,23 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type privilegeListValidator struct{}
+type privilegeSetValidator struct{}
 
 var (
-	_ validator.List = &privilegeListValidator{}
+	_ validator.Set = &privilegeSetValidator{}
 )
 
-func (p privilegeListValidator) Description(ctx context.Context) string {
+func (p privilegeSetValidator) Description(ctx context.Context) string {
 	return "Validate privileges"
 }
 
-func (p privilegeListValidator) MarkdownDescription(ctx context.Context) string {
+func (p privilegeSetValidator) MarkdownDescription(ctx context.Context) string {
 	return p.Description(ctx)
 }
 
-func (p privilegeListValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+func (p privilegeSetValidator) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
 	privileges := req.ConfigValue.Elements()
-	for i, priv := range privileges {
+	for _, priv := range privileges {
 		if priv.IsUnknown() {
 			// Can't resolve this now; we'll have to wait and see
 			continue
@@ -37,11 +37,11 @@ func (p privilegeListValidator) ValidateList(ctx context.Context, req validator.
 		privValue, ok := priv.(basetypes.StringValue)
 
 		if !ok {
-			resp.Diagnostics.AddAttributeError(req.Path.AtListIndex(i), "Failed while extracting value", "")
+			resp.Diagnostics.AddAttributeError(req.Path.AtSetValue(priv), "Failed while extracting value", "")
 		}
 		if !slices.Contains(tabular.DatabasePrivileges, privValue.ValueString()) {
 			resp.Diagnostics.AddAttributeError(
-				req.Path.AtListIndex(i),
+				req.Path.AtSetValue(priv),
 				"Invalid Database privilege",
 				fmt.Sprintf("%s is not a valid privilege. Valid privileges are %s", privValue.ValueString(), tabular.DatabasePrivileges),
 			)

@@ -33,6 +33,6 @@ resource "tabular_role_database_grants" "grants" {
     "LIST_TABLES",
   ]
   privileges_with_grant = [
-    "FUTURE_SELECT"
+    "FUTURE_DROP_TABLE",
   ]
 }

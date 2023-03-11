@@ -98,8 +98,8 @@ func (r *roleDatabaseGrantsResource) ImportState(ctx context.Context, req resour
 		WarehouseId:         types.StringValue(parts[0]),
 		Database:            types.StringValue(parts[1]),
 		RoleName:            types.StringValue(parts[2]),
-		Privileges:          types.ListNull(types.StringType),
-		PrivilegesWithGrant: types.ListNull(types.StringType),
+		Privileges:          types.ListUnknown(types.StringType),
+		PrivilegesWithGrant: types.ListUnknown(types.StringType),
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)

@@ -141,6 +141,7 @@ func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewRoleResource,
 		NewRoleRelationshipResource,
 		NewRoleDatabaseGrantsResource,
+		NewRoleMembershipResource,
 	}
 }
 

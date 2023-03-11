@@ -88,16 +88,16 @@ func (r *roleRelationshipResource) Read(ctx context.Context, req resource.ReadRe
 	parentRoleName := state.ParentRoleName.ValueString()
 	role, err := r.client.GetRole(parentRoleName)
 	if role == nil {
-		resp.Diagnostics.AddError("Error fetching role", "Could not get fetch role "+parentRoleName)
+		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+parentRoleName)
 		return
 	}
 	if err != nil {
-		resp.Diagnostics.AddError("Error fetching role", "Could not get fetch role "+parentRoleName+": "+err.Error())
+		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+parentRoleName+": "+err.Error())
 		return
 	}
 	found := false
 	childRoleName := state.ChildRoleName.ValueString()
-	for _, child := range *role.Children {
+	for _, child := range role.Children {
 		if child.Name == childRoleName {
 			found = true
 		}

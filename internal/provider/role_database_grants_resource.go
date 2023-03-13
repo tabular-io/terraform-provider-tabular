@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -18,6 +19,7 @@ var (
 	_ resource.Resource                = &roleDatabaseGrantsResource{}
 	_ resource.ResourceWithConfigure   = &roleDatabaseGrantsResource{}
 	_ resource.ResourceWithImportState = &roleDatabaseGrantsResource{}
+	_ resource.ResourceWithModifyPlan  = &roleDatabaseGrantsResource{}
 )
 
 type roleDatabaseGrantsResource struct {
@@ -74,13 +76,15 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 				},
 			},
 			"privileges": schema.SetAttribute{
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.Set{privilegeSetValidator{}},
 				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
 			},
 			"privileges_with_grant": schema.SetAttribute{
 				Optional:    true,
+				Computed:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.Set{privilegeSetValidator{}},
 				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
@@ -126,10 +130,14 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	state.Privileges, diags = types.SetValueFrom(ctx, types.StringType, grants.Privileges)
-	resp.Diagnostics.Append(diags...)
+	if grants.Privileges == nil {
+		state.Privileges = types.SetNull(types.StringType)
+	} else {
+		state.Privileges, diags = types.SetValueFrom(ctx, types.StringType, grants.Privileges)
+		resp.Diagnostics.Append(diags...)
+	}
 
-	if grants.PrivilegesWithGrant == nil || len(grants.PrivilegesWithGrant) == 0 {
+	if grants.PrivilegesWithGrant == nil {
 		state.PrivilegesWithGrant = types.SetNull(types.StringType)
 	} else {
 		state.PrivilegesWithGrant, diags = types.SetValueFrom(ctx, types.StringType, grants.PrivilegesWithGrant)
@@ -140,7 +148,7 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *roleDatabaseGrantsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -179,7 +187,6 @@ func (r *roleDatabaseGrantsResource) Create(ctx context.Context, req resource.Cr
 }
 
 func (r *roleDatabaseGrantsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	//TODO implement me
 	var plan, state roleDatabaseGrantsModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -275,4 +282,22 @@ func (r *roleDatabaseGrantsResource) Delete(ctx context.Context, req resource.De
 	}
 
 	resp.State.RemoveResource(ctx)
+}
+
+func (r *roleDatabaseGrantsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	var plan roleDatabaseGrantsModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Treat an empty list, null, and (known after apply) for privileges (w/ or w/o grant) interchangeably
+	if plan.Privileges.IsUnknown() || plan.Privileges.IsNull() {
+		plan.Privileges = types.SetValueMust(types.StringType, []attr.Value{})
+	}
+	if plan.PrivilegesWithGrant.IsUnknown() || plan.PrivilegesWithGrant.IsNull() {
+		plan.PrivilegesWithGrant = types.SetValueMust(types.StringType, []attr.Value{})
+	}
+
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, plan)...)
 }

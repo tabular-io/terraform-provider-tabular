@@ -25,10 +25,15 @@ data "tabular_warehouse" "warehouse" {
   name = "funhouse"
 }
 
+resource "tabular_database" "database" {
+  warehouse_id = data.tabular_warehouse.warehouse.id
+  name         = "other!"
+}
+
 resource "tabular_role_database_grants" "grants" {
   role_name    = tabular_role.example.name
   warehouse_id = data.tabular_warehouse.warehouse.id
-  database     = "dirt"
+  database     = tabular_database.database.name
   privileges = [
     "LIST_TABLES",
   ]

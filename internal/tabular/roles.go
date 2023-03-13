@@ -97,14 +97,13 @@ func (c *Client) RenameRole(roleName string, newRoleName string) (*Role, error) 
 
 func (c *Client) DeleteRole(roleName string, force bool) (err error) {
 	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/ws/v1/grants/roles/%s", c.Endpoint, roleName), nil)
-	query := req.URL.Query()
-	query.Add("force", strconv.FormatBool(force))
-	req.URL.RawQuery = query.Encode()
 	if err != nil {
 		return err
 	}
+	query := req.URL.Query()
+	query.Add("force", strconv.FormatBool(force))
+	req.URL.RawQuery = query.Encode()
 
-	// TODO: Require flag to delete role with usage?
 	_, err = c.doRequest(req)
 	if err != nil {
 		return err

@@ -45,14 +45,14 @@ func (c *Client) CreateDatabase(warehouseId, namespace string) (*Database, error
 	}
 	req, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("%s/ws/v1/ice/warehouses/%s/namespaces", c.Endpoint, warehouseId),
+		fmt.Sprintf("%s/ws/v1/warehouses/%s/namespaces/ext", c.Endpoint, warehouseId),
 		bytes.NewReader(reqBody),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = c.doRequest(req)
+	body, err := c.doRequest(req)
 	if err != nil {
 		clientErr, ok := err.(*ClientError)
 		if ok && clientErr.response.StatusCode == 404 {
@@ -62,9 +62,13 @@ func (c *Client) CreateDatabase(warehouseId, namespace string) (*Database, error
 		}
 	}
 
-	// We either have to refetch using an extension endpoint (iceberg API doesn't include ID) or send over
-	// a default role ID.
-	return c.GetDatabase(warehouseId, namespace)
+	var database Database
+	err = json.Unmarshal(body, &database)
+	if err != nil {
+		return nil, err
+	}
+
+	return &database, nil
 }
 
 func (c *Client) DeleteDatabase(warehouseId, namespace string) (err error) {

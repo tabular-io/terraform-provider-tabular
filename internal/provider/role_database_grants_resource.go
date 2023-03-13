@@ -74,7 +74,7 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 				},
 			},
 			"privileges": schema.SetAttribute{
-				Required:    true,
+				Optional:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.Set{privilegeSetValidator{}},
 				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
@@ -127,7 +127,12 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 	}
 
 	state.Privileges, diags = types.SetValueFrom(ctx, types.StringType, grants.Privileges)
-	resp.Diagnostics.Append(diags...)
+	if grants.Privileges == nil || len(grants.Privileges) == 0 {
+		state.Privileges = types.SetNull(types.StringType)
+	} else {
+		state.Privileges, diags = types.SetValueFrom(ctx, types.StringType, grants.Privileges)
+		resp.Diagnostics.Append(diags...)
+	}
 
 	if grants.PrivilegesWithGrant == nil || len(grants.PrivilegesWithGrant) == 0 {
 		state.PrivilegesWithGrant = types.SetNull(types.StringType)

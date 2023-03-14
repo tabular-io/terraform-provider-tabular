@@ -83,7 +83,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	roleName := state.Name.ValueString()
 	role, err := r.client.GetRole(roleName)
 	if err != nil {
-		resp.Diagnostics.AddError("Error fetching role", "Could not get fetch role "+roleName+": "+err.Error())
+		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+roleName+": "+err.Error())
 		return
 	}
 	if role == nil {

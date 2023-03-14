@@ -1,31 +1,48 @@
 package tabular
 
-type Warehouse struct {
-	Id     string
-	Name   string
-	Region string
-}
+type (
+	Warehouse struct {
+		Id     string
+		Name   string
+		Region string
+	}
 
-type Database struct {
-	WarehouseId string
-	Namespace   []string
-	Properties  map[string]string
-}
+	Database struct {
+		WarehouseId string
+		Namespace   []string
+		Properties  map[string]string
+	}
 
-type CreateRole struct {
-	Name string
-}
+	CreateRole struct {
+		Name string
+	}
 
-type Role struct {
-	Id       string
-	Name     string
-	Children *[]Role
-}
+	Role struct {
+		Id       string
+		Name     string
+		Children []Role
+		Members  []Member
+	}
 
-type RoleRelation struct {
-	ParentRoleId string
-	ChildRoleId  string
-}
+	Member struct {
+		Id        string
+		Email     string
+		WithAdmin bool
+	}
+
+	RoleRelation struct {
+		ParentRoleId string
+		ChildRoleId  string
+	}
+
+	RoleDatabaseGrants struct {
+		RoleName            string
+		WarehouseId         string
+		Database            string
+		Privileges          []string
+		PrivilegesWithGrant []string
+	}
+)
 
 var DatabasePrivileges = []string{
 	"MODIFY_DATABASE",
@@ -34,12 +51,4 @@ var DatabasePrivileges = []string{
 	"FUTURE_SELECT",
 	"FUTURE_UPDATE",
 	"FUTURE_DROP_TABLE",
-}
-
-type RoleDatabaseGrants struct {
-	RoleName            string
-	WarehouseId         string
-	Database            string
-	Privileges          []string
-	PrivilegesWithGrant []string
 }

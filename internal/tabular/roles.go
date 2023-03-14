@@ -18,7 +18,7 @@ type UpdateRoleRequest struct {
 
 type AddRoleMemberRequest struct {
 	MemberId string `json:"memberId"`
-	IsAdmin  bool   `json:"withGrant"`
+	IsAdmin  bool   `json:"withAdmin"`
 }
 
 func (c *Client) GetRole(roleName string) (*Role, error) {

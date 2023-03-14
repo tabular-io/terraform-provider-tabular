@@ -99,11 +99,11 @@ func (r *roleMembershipResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	adminMembers := internal.Map(
-		internal.Filter(role.Members, func(m tabular.Member) bool { return m.WithGrant }),
+		internal.Filter(role.Members, func(m tabular.Member) bool { return m.WithAdmin }),
 		func(m tabular.Member) string { return m.Email },
 	)
 	members := internal.Map(
-		internal.Filter(role.Members, func(m tabular.Member) bool { return !m.WithGrant }),
+		internal.Filter(role.Members, func(m tabular.Member) bool { return !m.WithAdmin }),
 		func(m tabular.Member) string { return m.Email },
 	)
 	state.AdminMembers, diags = types.SetValueFrom(ctx, types.StringType, adminMembers)

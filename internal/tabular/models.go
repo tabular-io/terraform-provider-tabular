@@ -27,7 +27,7 @@ type (
 	Member struct {
 		Id        string
 		Email     string
-		WithGrant bool
+		WithAdmin bool
 	}
 
 	RoleRelation struct {

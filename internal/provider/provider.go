@@ -138,6 +138,7 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewDatabaseResource,
 		NewRoleResource,
 		NewRoleRelationshipResource,
 		NewRoleDatabaseGrantsResource,

@@ -59,7 +59,7 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, &ClientError{
 			statusCode:   resp.StatusCode,
 			response:     *resp,

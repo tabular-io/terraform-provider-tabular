@@ -52,7 +52,8 @@ func (c *Client) CreateDatabase(warehouseId, namespace string) (*Database, error
 		return nil, err
 	}
 
-	body, err := c.doRequest(req)
+	// The create database extension doesn't return the location property, so we need to refetch for it
+	_, err = c.doRequest(req)
 	if err != nil {
 		clientErr, ok := err.(*ClientError)
 		if ok && clientErr.response.StatusCode == 404 {
@@ -62,13 +63,7 @@ func (c *Client) CreateDatabase(warehouseId, namespace string) (*Database, error
 		}
 	}
 
-	var database Database
-	err = json.Unmarshal(body, &database)
-	if err != nil {
-		return nil, err
-	}
-
-	return &database, nil
+	return c.GetDatabase(warehouseId, namespace)
 }
 
 func (c *Client) DeleteDatabase(warehouseId, namespace string) (err error) {

@@ -21,4 +21,11 @@ Grant users access to a role
 - `members` (Set of String)
 - `role_name` (String) Role name
 
+## Import
 
+Import is supported using the following syntax:
+
+```shell
+# Role membership can be imported with the role name
+terraform import tabular_role_membership.members "Example Role 1"
+```

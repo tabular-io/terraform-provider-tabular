@@ -1,4 +1,4 @@
-package provider
+package validators
 
 import (
 	"context"
@@ -9,21 +9,21 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type privilegeSetValidator struct{}
+type PrivilegeSetValidator struct{}
 
 var (
-	_ validator.Set = &privilegeSetValidator{}
+	_ validator.Set = &PrivilegeSetValidator{}
 )
 
-func (p privilegeSetValidator) Description(ctx context.Context) string {
+func (p PrivilegeSetValidator) Description(ctx context.Context) string {
 	return "Validate privileges"
 }
 
-func (p privilegeSetValidator) MarkdownDescription(ctx context.Context) string {
+func (p PrivilegeSetValidator) MarkdownDescription(ctx context.Context) string {
 	return p.Description(ctx)
 }
 
-func (p privilegeSetValidator) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+func (p PrivilegeSetValidator) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
 	privileges := req.ConfigValue.Elements()
 	for _, priv := range privileges {
 		if priv.IsUnknown() {

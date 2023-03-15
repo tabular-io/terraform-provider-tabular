@@ -1,4 +1,4 @@
-package provider
+package resources
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tabular-io/terraform-provider-tabular/internal"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/validators"
 	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
 	"strings"
 )
@@ -79,14 +80,14 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
-				Validators:  []validator.Set{privilegeSetValidator{}},
+				Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
 				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
 			},
 			"privileges_with_grant": schema.SetAttribute{
 				Optional:    true,
 				Computed:    true,
 				ElementType: types.StringType,
-				Validators:  []validator.Set{privilegeSetValidator{}},
+				Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
 				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
 			},
 		},

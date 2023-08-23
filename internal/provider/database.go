@@ -8,7 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
+	"github.com/tabular-io/tabular-sdk-go/tabular"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"strings"
 )
 
@@ -19,7 +20,7 @@ var (
 )
 
 type databaseResource struct {
-	client *tabular.Client
+	client *util.Client
 }
 
 func NewDatabaseResource() resource.Resource {
@@ -37,7 +38,7 @@ func (r *databaseResource) Configure(ctx context.Context, req resource.Configure
 		return
 	}
 
-	r.client = req.ProviderData.(*tabular.Client)
+	r.client = req.ProviderData.(*util.Client)
 }
 
 func (r *databaseResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -93,7 +94,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	warehouseId := state.WarehouseId.ValueString()
 	databaseName := state.Name.ValueString()
-	database, err := r.client.GetDatabase(warehouseId, databaseName)
+	database, _, err := r.client.V2.DefaultApi.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseName).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error fetching database",
@@ -101,12 +102,12 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 		)
 		return
 	}
-	if database == nil {
+	if database.Id == nil {
 		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	value, ok := database.Properties["location"]
+	value, ok := (*database.Properties)["location"]
 	if !ok {
 		resp.Diagnostics.AddError("Database in unexpected state", "Database did not have location table property set")
 		return
@@ -122,13 +123,27 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	database, err := r.client.CreateDatabase(plan.WarehouseId.ValueString(), plan.Name.ValueString())
+	namespace := plan.Name.ValueString()
+	warehouseId := plan.WarehouseId.ValueString()
+
+	_, _, err := r.client.V2.DefaultApi.CreateDatabase(ctx, *r.client.OrganizationId, warehouseId).
+		CreateNamespaceRequest(tabular.CreateNamespaceRequest{Namespace: &namespace}).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating database", "Could not create database: "+err.Error())
 		return
 	}
 
-	value, ok := database.Properties["location"]
+	db, _, err := r.client.V2.DefaultApi.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, namespace).Execute()
+
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error fetching database",
+			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", namespace, *db.WarehouseId, err.Error()),
+		)
+		return
+	}
+
+	value, ok := (*db.Properties)["location"]
 	if ok {
 		plan.Location = types.StringValue(value)
 	} else {
@@ -149,7 +164,9 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	var data databaseResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
-	err := r.client.DeleteDatabase(data.WarehouseId.ValueString(), data.Name.ValueString())
+	database := data.Name.ValueString()
+	warehouseId := data.Name.ValueString()
+	_, err := r.client.V2.DefaultApi.DeleteDatabase(ctx, *r.client.OrganizationId, warehouseId, database).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting database", err.Error())
 		return

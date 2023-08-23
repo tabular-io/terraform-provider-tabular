@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"strings"
 )
 
@@ -18,7 +18,7 @@ var (
 )
 
 type roleRelationshipResource struct {
-	client *tabular.Client
+	client *util.Client
 }
 
 func NewRoleRelationshipResource() resource.Resource {
@@ -30,7 +30,7 @@ func (r *roleRelationshipResource) Configure(ctx context.Context, req resource.C
 		return
 	}
 
-	r.client = req.ProviderData.(*tabular.Client)
+	r.client = req.ProviderData.(*util.Client)
 }
 
 type roleRelationshipModel struct {
@@ -86,7 +86,7 @@ func (r *roleRelationshipResource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	parentRoleName := state.ParentRoleName.ValueString()
-	role, err := r.client.GetRole(parentRoleName)
+	role, err := r.client.V1.GetRole(parentRoleName)
 	if role == nil {
 		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+parentRoleName)
 		return
@@ -114,7 +114,7 @@ func (r *roleRelationshipResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	err := r.client.AddRoleRelation(plan.ParentRoleName.ValueString(), plan.ChildRoleName.ValueString())
+	err := r.client.V1.AddRoleRelation(plan.ParentRoleName.ValueString(), plan.ChildRoleName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating role relation", err.Error())
 		return
@@ -137,7 +137,7 @@ func (r *roleRelationshipResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	err := r.client.DeleteRoleRelation(plan.ParentRoleName.ValueString(), plan.ChildRoleName.ValueString())
+	err := r.client.V1.DeleteRoleRelation(plan.ParentRoleName.ValueString(), plan.ChildRoleName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating role relation", err.Error())
 		return

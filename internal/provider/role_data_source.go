@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -19,7 +19,7 @@ func NewRoleDataSource() datasource.DataSource {
 
 // RoleDataSource defines the data source implementation.
 type RoleDataSource struct {
-	client *tabular.Client
+	client *util.Client
 }
 
 // RoleDataSourceModel describes the data source data model.
@@ -56,7 +56,7 @@ func (d *RoleDataSource) Configure(ctx context.Context, req datasource.Configure
 		return
 	}
 
-	client, ok := req.ProviderData.(*tabular.Client)
+	client, ok := req.ProviderData.(*util.Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -78,7 +78,7 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	role, err := d.client.GetRole(data.Name.ValueString())
+	role, _, err := d.client.V2.DefaultApi.GetRole(ctx, *d.client.OrganizationId, data.Name.ValueString()).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Failed fetching role", err.Error())
 		return
@@ -88,8 +88,8 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	data.Id = types.StringValue(role.Id)
-	data.Name = types.StringValue(role.Name)
+	data.Id = types.StringValue(*role.Id)
+	data.Name = types.StringValue(*role.Name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

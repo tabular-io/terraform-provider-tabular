@@ -1,4 +1,4 @@
-package data_sources
+package provider
 
 import (
 	"context"

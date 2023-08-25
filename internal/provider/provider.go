@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/tabular-io/terraform-provider-tabular/internal/provider/data-sources"
-	"github.com/tabular-io/terraform-provider-tabular/internal/provider/resources"
 	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
 	"os"
 )
@@ -140,18 +138,18 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		resources.NewDatabaseResource,
-		resources.NewRoleResource,
-		resources.NewRoleRelationshipResource,
-		resources.NewRoleDatabaseGrantsResource,
-		resources.NewRoleMembershipResource,
+		NewDatabaseResource,
+		NewRoleResource,
+		NewRoleRelationshipResource,
+		NewRoleDatabaseGrantsResource,
+		NewRoleMembershipResource,
 	}
 }
 
 func (p *TabularProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		data_sources.NewWarehouseDataSource,
-		data_sources.NewRoleDataSource,
+		NewWarehouseDataSource,
+		NewRoleDataSource,
 	}
 }
 

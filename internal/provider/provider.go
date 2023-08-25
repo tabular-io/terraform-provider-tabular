@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	tabularv2 "github.com/tabular-io/tabular-sdk-go/tabular"
-	"github.com/tabular-io/terraform-provider-tabular/internal/provider/data-sources"
-	"github.com/tabular-io/terraform-provider-tabular/internal/provider/resources"
 	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
 	"golang.org/x/oauth2/clientcredentials"

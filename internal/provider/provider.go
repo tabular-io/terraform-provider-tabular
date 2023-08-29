@@ -49,8 +49,8 @@ func (p *TabularProvider) Schema(ctx context.Context, req provider.SchemaRequest
 				Sensitive:   true,
 			},
 			"organization_id": schema.StringAttribute{
-				Description: "Tabular Organization ID. May also be provided via TABULAR_ORG_ID environment variable.",
-				Required:    true,
+				Description: "Tabular Organization ID. May also be provided via TABULAR_ORGANIZATION_ID environment variable.",
+				Optional:    true,
 				Sensitive:   false,
 			},
 		},
@@ -159,7 +159,7 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 	organizationId, err := ensureProviderConfigOption(
 		config.OrganizationId,
 		"organization_id",
-		"TABULAR_ORG_ID",
+		"TABULAR_ORGANIZATION_ID",
 		nil,
 	)
 	if err != nil {
@@ -168,6 +168,11 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	c := tabularv2.NewConfiguration()
 	c.HTTPClient = clientConfig.Client(context.Background())
+	c.Servers = []tabularv2.ServerConfiguration{
+		tabularv2.ServerConfiguration{
+			URL: *endpoint,
+		},
+	}
 	clientv2 := tabularv2.NewAPIClient(c)
 
 	client := &util.Client{V1: clientv1, V2: clientv2, OrganizationId: organizationId}
@@ -183,6 +188,8 @@ func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewRoleRelationshipResource,
 		NewRoleDatabaseGrantsResource,
 		NewRoleMembershipResource,
+		NewWarehouseResource,
+		NewStorageProfileS3Resource,
 	}
 }
 

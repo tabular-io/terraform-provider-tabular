@@ -16,7 +16,14 @@ var accProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, e
 }
 
 func accPreCheck(t *testing.T) {
-	envVars := []string{"TABULAR_ENDPOINT", "TABULAR_CREDENTIAL", "TABULAR_TOKEN_ENDPOINT"}
+	envVars := []string{
+		"TABULAR_ENDPOINT",
+		"TABULAR_CREDENTIAL",
+		"TABULAR_TOKEN_ENDPOINT",
+		"TABULAR_ORGANIZATION_ID",
+		"TABULAR_AWS_S3_BUCKET",
+		"TABULAR_AWS_IAM_ROLE_ARN",
+	}
 	for _, e := range envVars {
 		value := os.Getenv(e)
 		if value == "" {

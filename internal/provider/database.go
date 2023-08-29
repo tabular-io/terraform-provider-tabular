@@ -123,22 +123,22 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	namespace := plan.Name.ValueString()
+	name := plan.Name.ValueString()
 	warehouseId := plan.WarehouseId.ValueString()
 
 	_, _, err := r.client.V2.DefaultApi.CreateDatabase(ctx, *r.client.OrganizationId, warehouseId).
-		CreateNamespaceRequest(tabular.CreateNamespaceRequest{Namespace: &namespace}).Execute()
+		CreateDatabaseRequest(tabular.CreateDatabaseRequest{Name: &name}).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating database", "Could not create database: "+err.Error())
 		return
 	}
 
-	db, _, err := r.client.V2.DefaultApi.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, namespace).Execute()
+	db, _, err := r.client.V2.DefaultApi.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, name).Execute()
 
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error fetching database",
-			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", namespace, *db.WarehouseId, err.Error()),
+			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", name, *db.WarehouseId, err.Error()),
 		)
 		return
 	}

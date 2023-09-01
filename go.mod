@@ -2,14 +2,12 @@ module github.com/tabular-io/terraform-provider-tabular
 
 go 1.20
 
-replace github.com/tabular-io/tabular-sdk-go/tabular => ../tabular-sdk-go/tabular
-
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-framework v1.1.1
 	github.com/hashicorp/terraform-plugin-go v0.18.0
 	github.com/hashicorp/terraform-plugin-testing v1.4.0
-	github.com/tabular-io/tabular-sdk-go/tabular v0.0.0-00010101000000-000000000000
+	github.com/tabular-io/tabular-sdk-go v1.0.0
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	golang.org/x/oauth2 v0.7.0
 )

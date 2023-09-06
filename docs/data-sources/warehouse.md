@@ -32,7 +32,7 @@ output "warehouse_region" {
 ### Optional
 
 - `id` (String) Warehouse ID
-- `name` (String) Role Name
+- `name` (String) Warehouse Name
 
 ### Read-Only
 

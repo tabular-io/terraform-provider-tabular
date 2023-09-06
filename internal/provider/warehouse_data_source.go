@@ -45,7 +45,7 @@ func (d *WarehouseDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Optional:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Role Name",
+				MarkdownDescription: "Warehouse Name",
 				Optional:            true,
 			},
 			"organization_id": schema.StringAttribute{

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tabular-io/terraform-provider-tabular/internal"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
 )
 
@@ -21,7 +22,7 @@ var (
 )
 
 type roleMembershipResource struct {
-	client *tabular.Client
+	client *util.Client
 }
 
 func NewRoleMembershipResource() resource.Resource {
@@ -33,7 +34,7 @@ func (r *roleMembershipResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	r.client = req.ProviderData.(*tabular.Client)
+	r.client = req.ProviderData.(*util.Client)
 }
 
 type roleMembershipModel struct {
@@ -88,7 +89,7 @@ func (r *roleMembershipResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	roleName := state.RoleName.ValueString()
-	role, err := r.client.GetRole(roleName)
+	role, err := r.client.V1.GetRole(roleName)
 	if role == nil {
 		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+roleName)
 		return
@@ -147,7 +148,7 @@ func (r *roleMembershipResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	orgMemberMap, err := r.client.GetOrgMemberIdsMap()
+	orgMemberMap, err := r.client.V1.GetOrgMemberIdsMap()
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to fetch org members", err.Error())
 		return
@@ -167,7 +168,7 @@ func (r *roleMembershipResource) Create(ctx context.Context, req resource.Create
 		)
 	})
 
-	err = r.client.AddRoleMembers(plan.RoleName.ValueString(), adminMemberIds, memberIds)
+	err = r.client.V1.AddRoleMembers(plan.RoleName.ValueString(), adminMemberIds, memberIds)
 	if err != nil {
 		resp.Diagnostics.AddError("Error adding role members", err.Error())
 		return
@@ -195,7 +196,7 @@ func (r *roleMembershipResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	orgMemberMap, err := r.client.GetOrgMemberIdsMap()
+	orgMemberMap, err := r.client.V1.GetOrgMemberIdsMap()
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to fetch org members", err.Error())
 		return
@@ -235,7 +236,7 @@ func (r *roleMembershipResource) Update(ctx context.Context, req resource.Update
 	adminToRemove := internal.Difference(stateAdminMemberIds, planAdminMemberIds)
 	toRemove := internal.Difference(stateMemberIds, planMemberIds)
 	// TODO: do I need to dedupe removals? Are duplicates even possible?
-	err = r.client.DeleteRoleMembers(state.RoleName.ValueString(), append(adminToRemove, toRemove...))
+	err = r.client.V1.DeleteRoleMembers(state.RoleName.ValueString(), append(adminToRemove, toRemove...))
 	if err != nil {
 		resp.Diagnostics.AddError("Error removing role members", err.Error())
 		return
@@ -243,7 +244,7 @@ func (r *roleMembershipResource) Update(ctx context.Context, req resource.Update
 
 	adminToAdd := internal.Difference(planAdminMemberIds, stateAdminMemberIds)
 	toAdd := internal.Difference(planMemberIds, stateMemberIds)
-	err = r.client.AddRoleMembers(state.RoleName.ValueString(), adminToAdd, toAdd)
+	err = r.client.V1.AddRoleMembers(state.RoleName.ValueString(), adminToAdd, toAdd)
 	if err != nil {
 		resp.Diagnostics.AddError("Error adding role members", err.Error())
 		return
@@ -267,7 +268,7 @@ func (r *roleMembershipResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	orgMemberMap, err := r.client.GetOrgMemberIdsMap()
+	orgMemberMap, err := r.client.V1.GetOrgMemberIdsMap()
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to fetch org members", err.Error())
 		return
@@ -280,7 +281,7 @@ func (r *roleMembershipResource) Delete(ctx context.Context, req resource.Delete
 		)
 	})
 
-	err = r.client.DeleteRoleMembers(state.RoleName.ValueString(), memberIds)
+	err = r.client.V1.DeleteRoleMembers(state.RoleName.ValueString(), memberIds)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating role relation", err.Error())
 		return

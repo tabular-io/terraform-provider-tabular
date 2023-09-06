@@ -9,8 +9,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	tabularv2 "github.com/tabular-io/tabular-sdk-go/tabular"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
+	"golang.org/x/oauth2/clientcredentials"
 	"os"
+	"strings"
 )
 
 var defaultEndpoint = "https://api.tabular.io"
@@ -44,14 +48,20 @@ func (p *TabularProvider) Schema(ctx context.Context, req provider.SchemaRequest
 				Optional:    credentialSet,
 				Sensitive:   true,
 			},
+			"organization_id": schema.StringAttribute{
+				Description: "Tabular Organization ID. May also be provided via TABULAR_ORGANIZATION_ID environment variable.",
+				Optional:    true,
+				Sensitive:   false,
+			},
 		},
 	}
 }
 
 type TabularProviderModel struct {
-	TokenEndpoint types.String `tfsdk:"token_endpoint"`
-	Endpoint      types.String `tfsdk:"endpoint"`
-	Credential    types.String `tfsdk:"credential"`
+	TokenEndpoint  types.String `tfsdk:"token_endpoint"`
+	Endpoint       types.String `tfsdk:"endpoint"`
+	Credential     types.String `tfsdk:"credential"`
+	OrganizationId types.String `tfsdk:"organization_id"`
 }
 
 func ensureProviderConfigOption(
@@ -123,7 +133,14 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	client, err := tabular.NewClient(
+
+	parts := strings.SplitN(*credential, ":", 2)
+
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError("Invalid credential provided", err.Error())
+	}
+
+	clientv1, err := tabular.NewClient(
 		*endpoint,
 		*tokenEndpoint,
 		*credential,
@@ -131,6 +148,34 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 	if err != nil {
 		resp.Diagnostics.AddError("Failed setting up Tabular Client", err.Error())
 	}
+
+	clientConfig := clientcredentials.Config{
+		ClientID:     parts[0],
+		ClientSecret: parts[1],
+		TokenURL:     *tokenEndpoint,
+		AuthStyle:    1,
+	}
+
+	organizationId, err := ensureProviderConfigOption(
+		config.OrganizationId,
+		"organization_id",
+		"TABULAR_ORGANIZATION_ID",
+		nil,
+	)
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(path.Root("organization_id"), "OrganizationId Invalid", err.Error())
+	}
+
+	c := tabularv2.NewConfiguration()
+	c.HTTPClient = clientConfig.Client(context.Background())
+	c.Servers = []tabularv2.ServerConfiguration{
+		tabularv2.ServerConfiguration{
+			URL: *endpoint,
+		},
+	}
+	clientv2 := tabularv2.NewAPIClient(c)
+
+	client := &util.Client{V1: clientv1, V2: clientv2, OrganizationId: organizationId}
 
 	resp.DataSourceData = client
 	resp.ResourceData = client
@@ -143,6 +188,8 @@ func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewRoleRelationshipResource,
 		NewRoleDatabaseGrantsResource,
 		NewRoleMembershipResource,
+		NewWarehouseResource,
+		NewStorageProfileS3Resource,
 	}
 }
 

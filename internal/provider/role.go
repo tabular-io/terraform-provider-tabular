@@ -9,7 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
+	"github.com/tabular-io/tabular-sdk-go/tabular"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 )
 
 type roleResource struct {
-	client *tabular.Client
+	client *util.Client
 }
 
 func NewRoleResource() resource.Resource {
@@ -31,7 +32,7 @@ func (r *roleResource) Configure(ctx context.Context, req resource.ConfigureRequ
 		return
 	}
 
-	r.client = req.ProviderData.(*tabular.Client)
+	r.client = req.ProviderData.(*util.Client)
 }
 
 type roleResourceModel struct {
@@ -81,7 +82,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	roleName := state.Name.ValueString()
-	role, err := r.client.GetRole(roleName)
+	role, _, err := r.client.V2.DefaultApi.GetRole(ctx, *r.client.OrganizationId, roleName).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+roleName+": "+err.Error())
 		return
@@ -91,7 +92,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	state.Name = types.StringValue(role.Name)
+	state.Name = types.StringValue(roleName)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -103,13 +104,15 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	role, err := r.client.CreateRole(plan.Name.ValueString())
+	roleName := plan.Name.ValueString()
+	createRoleRequest := r.client.V2.DefaultApi.CreateRole(ctx, *r.client.OrganizationId)
+	role, _, err := createRoleRequest.CreateRoleRequest(tabular.CreateRoleRequest{RoleName: &roleName}).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating role", "Could not create role: "+err.Error())
 		return
 	}
 
-	plan.Id = types.StringValue(role.Id)
+	plan.Id = types.StringValue(*role.Id)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -128,7 +131,8 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	currentName := current.Name.ValueString()
 	targetName := target.Name.ValueString()
 	if currentName != targetName {
-		role, err := r.client.RenameRole(currentName, targetName)
+		updateRoleRequest := r.client.V2.DefaultApi.UpdateRoleName(ctx, *r.client.OrganizationId, currentName)
+		role, _, err := updateRoleRequest.UpdateRoleRequest(tabular.UpdateRoleRequest{RoleName: &targetName}).Execute()
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("name"),
@@ -137,8 +141,8 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			)
 			return
 		}
-		current.Id = types.StringValue(role.Id)
-		current.Name = types.StringValue(role.Name)
+		current.Id = types.StringValue(*role.Id)
+		current.Name = types.StringValue(*role.Name)
 	}
 
 	current.ForceDestroy = target.ForceDestroy
@@ -151,7 +155,9 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	var data roleResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
-	err := r.client.DeleteRole(data.Name.ValueString(), data.ForceDestroy.ValueBool())
+	forceDestroy := data.ForceDestroy.ValueBool()
+	roleName := data.Name.ValueString()
+	_, err := r.client.V2.DefaultApi.DeleteRole(ctx, *r.client.OrganizationId, roleName).Force(forceDestroy).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting role", "Something went wrong. Does the role still have any users/roles/permissions attached to it? Err: "+err.Error())
 		return

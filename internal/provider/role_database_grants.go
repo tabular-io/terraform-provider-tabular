@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tabular-io/terraform-provider-tabular/internal"
+	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"github.com/tabular-io/terraform-provider-tabular/internal/provider/validators"
-	"github.com/tabular-io/terraform-provider-tabular/internal/tabular"
 	"strings"
 )
 
@@ -24,7 +24,7 @@ var (
 )
 
 type roleDatabaseGrantsResource struct {
-	client *tabular.Client
+	client *util.Client
 }
 
 func (r *roleDatabaseGrantsResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -32,7 +32,7 @@ func (r *roleDatabaseGrantsResource) Configure(ctx context.Context, req resource
 		return
 	}
 
-	r.client = req.ProviderData.(*tabular.Client)
+	r.client = req.ProviderData.(*util.Client)
 }
 
 func NewRoleDatabaseGrantsResource() resource.Resource {
@@ -121,7 +121,7 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 	warehouseId := state.WarehouseId.ValueString()
 	database := state.Database.ValueString()
 	roleName := state.RoleName.ValueString()
-	grants, err := r.client.GetRoleDatabaseGrants(warehouseId, database, roleName)
+	grants, err := r.client.V1.GetRoleDatabaseGrants(warehouseId, database, roleName)
 	if err != nil {
 		resp.Diagnostics.AddError("Error fetching grants for role", err.Error())
 		return
@@ -167,7 +167,7 @@ func (r *roleDatabaseGrantsResource) Create(ctx context.Context, req resource.Cr
 	resp.Diagnostics.Append(plan.Privileges.ElementsAs(ctx, &planPrivs, false)...)
 	resp.Diagnostics.Append(plan.PrivilegesWithGrant.ElementsAs(ctx, &planPrivsWithGrant, false)...)
 
-	err := r.client.AddRoleDatabaseGrants(warehouseId, database, roleName, planPrivsWithGrant, true)
+	err := r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, planPrivsWithGrant, true)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges_with_grant"),
@@ -175,7 +175,7 @@ func (r *roleDatabaseGrantsResource) Create(ctx context.Context, req resource.Cr
 			err.Error(),
 		)
 	}
-	err = r.client.AddRoleDatabaseGrants(warehouseId, database, roleName, planPrivs, false)
+	err = r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, planPrivs, false)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges"),
@@ -210,7 +210,7 @@ func (r *roleDatabaseGrantsResource) Update(ctx context.Context, req resource.Up
 	withGrantToAdd := internal.Difference(planPrivsWithGrant, statePrivsWithGrant)
 	toAdd := internal.Difference(planPrivs, statePrivs)
 
-	err := r.client.RevokeRoleDatabaseGrants(warehouseId, database, roleName, withGrantToRemove, true)
+	err := r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, withGrantToRemove, true)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges_with_grant"),
@@ -218,7 +218,7 @@ func (r *roleDatabaseGrantsResource) Update(ctx context.Context, req resource.Up
 			err.Error(),
 		)
 	}
-	err = r.client.RevokeRoleDatabaseGrants(warehouseId, database, roleName, toRemove, false)
+	err = r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, toRemove, false)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges"),
@@ -226,7 +226,7 @@ func (r *roleDatabaseGrantsResource) Update(ctx context.Context, req resource.Up
 			err.Error(),
 		)
 	}
-	err = r.client.AddRoleDatabaseGrants(warehouseId, database, roleName, withGrantToAdd, true)
+	err = r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, withGrantToAdd, true)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges_with_grant"),
@@ -234,7 +234,7 @@ func (r *roleDatabaseGrantsResource) Update(ctx context.Context, req resource.Up
 			err.Error(),
 		)
 	}
-	err = r.client.AddRoleDatabaseGrants(warehouseId, database, roleName, toAdd, false)
+	err = r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, toAdd, false)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges"),
@@ -261,7 +261,7 @@ func (r *roleDatabaseGrantsResource) Delete(ctx context.Context, req resource.De
 	resp.Diagnostics.Append(state.Privileges.ElementsAs(ctx, &statePrivs, false)...)
 	resp.Diagnostics.Append(state.PrivilegesWithGrant.ElementsAs(ctx, &statePrivsWithGrant, false)...)
 
-	err := r.client.RevokeRoleDatabaseGrants(warehouseId, database, roleName, statePrivsWithGrant, true)
+	err := r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, statePrivsWithGrant, true)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges_with_grant"),
@@ -269,7 +269,7 @@ func (r *roleDatabaseGrantsResource) Delete(ctx context.Context, req resource.De
 			err.Error(),
 		)
 	}
-	err = r.client.RevokeRoleDatabaseGrants(warehouseId, database, roleName, statePrivs, false)
+	err = r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, statePrivs, false)
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("privileges"),

@@ -47,12 +47,13 @@ func (r *storageProfileS3Resource) Schema(ctx context.Context, req resource.Sche
 		Description: "Tabular S3 Storage Profile",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: "Storage Profile ID",
+				Description: "Storage Profile UUID",
 				Computed:    true,
 			},
 			"region": schema.StringAttribute{
-				Description: "Storage Profile region",
-				Required:    true,
+				Description:         "Storage Profile region",
+				MarkdownDescription: "",
+				Required:            true,
 			},
 			"s3_bucket_name": schema.StringAttribute{
 				Description: "S3 bucket name",

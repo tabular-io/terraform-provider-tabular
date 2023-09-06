@@ -22,5 +22,3 @@ Role data source
 ### Read-Only
 
 - `id` (String) ID
-
-

@@ -8,7 +8,7 @@ resource "tabular_role" "example" {
 
 resource "tabular_database" "database" {
   warehouse_id = data.tabular_warehouse.warehouse.id
-  name         = "other!"
+  name         = "other"
 }
 
 resource "tabular_role_database_grants" "grants" {

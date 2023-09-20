@@ -7,5 +7,5 @@ terraform {
 }
 
 provider "tabular" {
-  organization_id = ""
+  organization_id = var.organization_id
 }

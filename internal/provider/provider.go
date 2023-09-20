@@ -31,6 +31,7 @@ func (p *TabularProvider) Metadata(ctx context.Context, req provider.MetadataReq
 
 func (p *TabularProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	_, credentialSet := os.LookupEnv("TABULAR_CREDENTIAL")
+	_, organizationID := os.LookupEnv("TABULAR_ORGANIZATION_ID")
 	resp.Schema = schema.Schema{
 		Description: "",
 		Attributes: map[string]schema.Attribute{
@@ -50,7 +51,8 @@ func (p *TabularProvider) Schema(ctx context.Context, req provider.SchemaRequest
 			},
 			"organization_id": schema.StringAttribute{
 				Description: "Tabular Organization ID. May also be provided via TABULAR_ORGANIZATION_ID environment variable.",
-				Optional:    true,
+				Required:    !organizationID,
+				Optional:    organizationID,
 				Sensitive:   false,
 			},
 		},

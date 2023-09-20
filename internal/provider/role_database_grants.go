@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -13,7 +15,6 @@ import (
 	"github.com/tabular-io/terraform-provider-tabular/internal"
 	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"github.com/tabular-io/terraform-provider-tabular/internal/provider/validators"
-	"strings"
 )
 
 var (

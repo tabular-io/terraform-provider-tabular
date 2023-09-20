@@ -35,7 +35,7 @@ func (d *RoleDataSource) Metadata(ctx context.Context, req datasource.MetadataRe
 func (d *RoleDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Role data source",
+		MarkdownDescription: "Tabular Role data source",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

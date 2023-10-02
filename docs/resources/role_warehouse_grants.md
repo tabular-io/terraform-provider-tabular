@@ -3,12 +3,12 @@
 page_title: "tabular_role_warehouse_grants Resource - terraform-provider-tabular"
 subcategory: ""
 description: |-
-  Managed the grants a role has for a warehouse
+  Manage the grants a role has for a warehouse
 ---
 
 # tabular_role_warehouse_grants (Resource)
 
-Managed the grants a role has for a warehouse
+Manage the grants a role has for a warehouse
 
 ## Example Usage
 

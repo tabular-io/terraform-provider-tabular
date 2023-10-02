@@ -48,7 +48,7 @@ func (r *roleWarehouseGrantsResource) Metadata(ctx context.Context, req resource
 
 func (r *roleWarehouseGrantsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Managed the grants a role has for a warehouse",
+		Description: "Manage the grants a role has for a warehouse",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Terraform resource id",

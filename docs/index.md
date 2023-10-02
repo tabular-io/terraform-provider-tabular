@@ -30,9 +30,9 @@ provider "tabular" {
 
 ### Required
 
+- `credential` (String, Sensitive) Tabular Credential. May also be provided via TABULAR_CREDENTIAL environment variable.
 - `organization_id` (String) Tabular Organization ID. May also be provided via TABULAR_ORGANIZATION_ID environment
   variable.
-- `credential` (String, Sensitive) Tabular Credential. May also be provided via TABULAR_CREDENTIAL environment variable.
 
 ### Optional
 

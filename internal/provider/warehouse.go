@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &warehouseResource{}
-	_ resource.ResourceWithConfigure = &warehouseResource{}
+	_ resource.Resource                = &warehouseResource{}
+	_ resource.ResourceWithConfigure   = &warehouseResource{}
+	_ resource.ResourceWithImportState = &warehouseResource{}
 )
 
 type warehouseResource struct {
@@ -60,6 +61,14 @@ func (r *warehouseResource) Schema(ctx context.Context, req resource.SchemaReque
 	}
 }
 
+func (r *warehouseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	state := warehouseResourceModel{
+		Id: types.StringValue(req.ID),
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
 func (r *warehouseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state warehouseResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -78,6 +87,10 @@ func (r *warehouseResource) Read(ctx context.Context, req resource.ReadRequest, 
 		state.StorageProfile = types.StringValue(*storageProfileId)
 	} else {
 		state.StorageProfile = types.StringNull()
+	}
+
+	if warehouseName, ok := warehouse.GetNameOk(); ok {
+		state.Name = types.StringValue(*warehouseName)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)

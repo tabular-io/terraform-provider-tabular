@@ -165,7 +165,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	database := data.Name.ValueString()
-	warehouseId := data.Name.ValueString()
+	warehouseId := data.WarehouseId.ValueString()
 	_, err := r.client.V2.DefaultApi.DeleteDatabase(ctx, *r.client.OrganizationId, warehouseId, database).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting database", err.Error())

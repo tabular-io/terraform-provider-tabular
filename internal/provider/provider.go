@@ -23,6 +23,7 @@ var defaultTokenEndpoint = "https://api.tabular.io/ws/v1/oauth/tokens"
 var _ provider.Provider = &TabularProvider{}
 
 type TabularProvider struct {
+	Version string
 }
 
 func (p *TabularProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -169,6 +170,7 @@ func (p *TabularProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	c := tabularv2.NewConfiguration()
+	c.UserAgent = fmt.Sprintf("Terraform/%s terraform-provider-tabular/%s", req.TerraformVersion, p.Version)
 	c.HTTPClient = clientConfig.Client(context.Background())
 	c.Servers = []tabularv2.ServerConfiguration{
 		tabularv2.ServerConfiguration{
@@ -205,6 +207,6 @@ func (p *TabularProvider) DataSources(ctx context.Context) []func() datasource.D
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &TabularProvider{}
+		return &TabularProvider{Version: version}
 	}
 }

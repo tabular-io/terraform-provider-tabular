@@ -9,9 +9,9 @@ import (
 )
 
 func TestAccWarehouseRoleGrantsWithoutGrants(t *testing.T) {
+	testId := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	bucketName := os.Getenv("TABULAR_AWS_S3_BUCKET")
 	roleArn := os.Getenv("TABULAR_AWS_IAM_ROLE_ARN")
-	name := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	privilege := "FUTURE_DROP_TABLE"
 
 	resource.Test(t, resource.TestCase{
@@ -19,7 +19,7 @@ func TestAccWarehouseRoleGrantsWithoutGrants(t *testing.T) {
 		ProtoV6ProviderFactories: accProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWarehouseRoleGrantsConfigWithoutGrants(bucketName, roleArn, name, privilege),
+				Config: testAccWarehouseRoleGrantsConfigWithoutGrants(bucketName, roleArn, testId, testId, privilege),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("tabular_role_warehouse_grants.test", "privileges.0", privilege),
 					resource.TestCheckNoResourceAttr("tabular_role_warehouse_grants.test", "privileges_with_grant"),
@@ -29,7 +29,7 @@ func TestAccWarehouseRoleGrantsWithoutGrants(t *testing.T) {
 	})
 }
 
-func testAccWarehouseRoleGrantsConfigWithoutGrants(bucketName, roleArn, name, privilege string) string {
+func testAccWarehouseRoleGrantsConfigWithoutGrants(bucketName, roleArn, name, tabularRole, privilege string) string {
 	return fmt.Sprintf(`
 resource "tabular_s3_storage_profile" "test" {
   region = "us-west-2"
@@ -43,7 +43,7 @@ resource "tabular_warehouse" "test" {
 }
 
 resource "tabular_role" "test" {
-	name = "tfacc"
+	name = "%s"
 }
 
 resource "tabular_role_warehouse_grants" "test" {
@@ -54,13 +54,13 @@ resource "tabular_role_warehouse_grants" "test" {
 	]
 }
 	
-`, bucketName, roleArn, name, privilege)
+`, bucketName, roleArn, name, tabularRole, privilege)
 }
 
 func TestAccWarehouseRoleGrantsWithGrants(t *testing.T) {
+	testId := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	bucketName := os.Getenv("TABULAR_AWS_S3_BUCKET")
 	roleArn := os.Getenv("TABULAR_AWS_IAM_ROLE_ARN")
-	name := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	privilege := "FUTURE_MODIFY_DATABASE"
 
 	resource.Test(t, resource.TestCase{
@@ -68,7 +68,7 @@ func TestAccWarehouseRoleGrantsWithGrants(t *testing.T) {
 		ProtoV6ProviderFactories: accProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWarehouseRoleGrantsWithGrantsConfig(bucketName, roleArn, name, privilege),
+				Config: testAccWarehouseRoleGrantsWithGrantsConfig(bucketName, roleArn, testId, testId, privilege),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("tabular_role_warehouse_grants.test", "privileges_with_grant.0", privilege),
 					resource.TestCheckNoResourceAttr("tabular_role_warehouse_grants.test", "privileges"),
@@ -78,7 +78,7 @@ func TestAccWarehouseRoleGrantsWithGrants(t *testing.T) {
 	})
 }
 
-func testAccWarehouseRoleGrantsWithGrantsConfig(bucketName, roleArn, name, privilege string) string {
+func testAccWarehouseRoleGrantsWithGrantsConfig(bucketName, roleArn, name, tabularRole, privilege string) string {
 	return fmt.Sprintf(`
 resource "tabular_s3_storage_profile" "test" {
   region = "us-west-2"
@@ -92,7 +92,7 @@ resource "tabular_warehouse" "test" {
 }
 
 resource "tabular_role" "test" {
-	name = "tfacc"
+	name = "%s"
 }
 
 resource "tabular_role_warehouse_grants" "test" {
@@ -103,13 +103,13 @@ resource "tabular_role_warehouse_grants" "test" {
 	]
 }
 	
-`, bucketName, roleArn, name, privilege)
+`, bucketName, roleArn, name, tabularRole, privilege)
 }
 
 func TestAccWarehouseRoleGrantsWithBothGrants(t *testing.T) {
+	testId := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	bucketName := os.Getenv("TABULAR_AWS_S3_BUCKET")
 	roleArn := os.Getenv("TABULAR_AWS_IAM_ROLE_ARN")
-	name := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	privilege := "FUTURE_DROP_TABLE"
 	privilegeWithGrant := "FUTURE_MODIFY_DATABASE"
 
@@ -118,7 +118,7 @@ func TestAccWarehouseRoleGrantsWithBothGrants(t *testing.T) {
 		ProtoV6ProviderFactories: accProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWarehouseRoleGrantsWithBothGrantsConfig(bucketName, roleArn, name, privilege, privilegeWithGrant),
+				Config: testAccWarehouseRoleGrantsWithBothGrantsConfig(bucketName, roleArn, testId, testId, privilege, privilegeWithGrant),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("tabular_role_warehouse_grants.test", "privileges.0", privilege),
 					resource.TestCheckResourceAttr("tabular_role_warehouse_grants.test", "privileges_with_grant.0", privilegeWithGrant),
@@ -128,7 +128,7 @@ func TestAccWarehouseRoleGrantsWithBothGrants(t *testing.T) {
 	})
 }
 
-func testAccWarehouseRoleGrantsWithBothGrantsConfig(bucketName, roleArn, name, privilege, privilegeWithGrant string) string {
+func testAccWarehouseRoleGrantsWithBothGrantsConfig(bucketName, roleArn, name, tabularRole, privilege, privilegeWithGrant string) string {
 	return fmt.Sprintf(`
 resource "tabular_s3_storage_profile" "test" {
   region = "us-west-2"
@@ -142,7 +142,7 @@ resource "tabular_warehouse" "test" {
 }
 
 resource "tabular_role" "test" {
-	name = "tfacc"
+	name = "%s"
 }
 
 resource "tabular_role_warehouse_grants" "test" {
@@ -156,20 +156,20 @@ resource "tabular_role_warehouse_grants" "test" {
 	]
 }
 	
-`, bucketName, roleArn, name, privilege, privilegeWithGrant)
+`, bucketName, roleArn, name, tabularRole, privilege, privilegeWithGrant)
 }
 
 func TestAccWarehouseRoleMultipleGrants(t *testing.T) {
+	testId := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	bucketName := os.Getenv("TABULAR_AWS_S3_BUCKET")
 	roleArn := os.Getenv("TABULAR_AWS_IAM_ROLE_ARN")
-	name := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { accPreCheck(t) },
 		ProtoV6ProviderFactories: accProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccWarehouseRoleMultipleGrantsConfig(bucketName, roleArn, name),
+				Config: testAccWarehouseRoleMultipleGrantsConfig(bucketName, roleArn, testId, testId),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("tabular_role_warehouse_grants.test", "privileges.1", "MODIFY_WAREHOUSE"),
 					resource.TestCheckResourceAttr("tabular_role_warehouse_grants.test", "privileges.0", "FUTURE_LIST_TABLES"),
@@ -180,7 +180,7 @@ func TestAccWarehouseRoleMultipleGrants(t *testing.T) {
 	})
 }
 
-func testAccWarehouseRoleMultipleGrantsConfig(bucketName, roleArn, name string) string {
+func testAccWarehouseRoleMultipleGrantsConfig(bucketName, roleArn, name, tabularRole string) string {
 	return fmt.Sprintf(`
 resource "tabular_s3_storage_profile" "test" {
   region = "us-west-2"
@@ -194,7 +194,7 @@ resource "tabular_warehouse" "test" {
 }
 
 resource "tabular_role" "test" {
-	name = "tfacc"
+	name = "%s"
 }
 
 resource "tabular_role_warehouse_grants" "test" {
@@ -209,5 +209,5 @@ resource "tabular_role_warehouse_grants" "test" {
 	]
 }
 	
-`, bucketName, roleArn, name)
+`, bucketName, roleArn, name, tabularRole)
 }

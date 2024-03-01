@@ -78,7 +78,7 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	role, _, err := d.client.V2.DefaultApi.GetRole(ctx, *d.client.OrganizationId, data.Name.ValueString()).Execute()
+	role, _, err := d.client.V2.DefaultAPI.GetRole(ctx, *d.client.OrganizationId, data.Name.ValueString()).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Failed fetching role", err.Error())
 		return

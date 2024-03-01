@@ -28,6 +28,7 @@ func NewDatabaseResource() resource.Resource {
 }
 
 type databaseResourceModel struct {
+	Id          types.String `tfsdk:"id"`
 	WarehouseId types.String `tfsdk:"warehouse_id"`
 	Name        types.String `tfsdk:"name"`
 	Location    types.String `tfsdk:"location"`
@@ -49,6 +50,13 @@ func (r *databaseResource) Schema(ctx context.Context, req resource.SchemaReques
 	resp.Schema = schema.Schema{
 		Description: "A Tabular Database",
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "Database ID",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"warehouse_id": schema.StringAttribute{
 				Description: "Warehouse ID (uuid)",
 				Required:    true,
@@ -72,14 +80,13 @@ func (r *databaseResource) Schema(ctx context.Context, req resource.SchemaReques
 }
 
 func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, "/", 2)
+	parts := strings.SplitN(req.ID, "/", 1)
 	if len(parts) != 2 {
 		resp.Diagnostics.AddError("Could not parse ", "Expected two part value, split by a /")
 	}
 	state := databaseResourceModel{
 		WarehouseId: types.StringValue(parts[0]),
-		Name:        types.StringValue(parts[1]),
-		Location:    types.StringUnknown(),
+		Id:          types.StringValue(parts[1]),
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
@@ -93,12 +100,12 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	warehouseId := state.WarehouseId.ValueString()
-	databaseName := state.Name.ValueString()
-	database, _, err := r.client.V2.DefaultApi.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseName).Execute()
+	databaseId := state.Id.ValueString()
+	database, _, err := r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Type_("id").Execute()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error fetching database",
-			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", databaseName, warehouseId, err.Error()),
+			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", databaseId, warehouseId, err.Error()),
 		)
 		return
 	}
@@ -113,6 +120,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 	state.Location = types.StringValue(value)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -126,26 +134,24 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	name := plan.Name.ValueString()
 	warehouseId := plan.WarehouseId.ValueString()
 
-	_, _, err := r.client.V2.DefaultApi.CreateDatabase(ctx, *r.client.OrganizationId, warehouseId).
+	db, _, err := r.client.V2.DefaultAPI.CreateDatabase(ctx, *r.client.OrganizationId, warehouseId).
 		CreateDatabaseRequest(tabular.CreateDatabaseRequest{Name: &name}).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating database", "Could not create database: "+err.Error())
 		return
 	}
 
-	db, _, err := r.client.V2.DefaultApi.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, name).Execute()
-
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error fetching database",
-			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", name, *db.WarehouseId, err.Error()),
-		)
-		return
+	value, ok := db.GetIdOk()
+	if ok {
+		plan.Id = types.StringValue(*value)
+	} else {
+		resp.Diagnostics.AddError("Unable to get database id", "Unable to get database id")
 	}
 
-	value, ok := (*db.Properties)["location"]
+	propertiesMap, ok := db.GetPropertiesOk()
 	if ok {
-		plan.Location = types.StringValue(value)
+		props := *propertiesMap
+		plan.Location = types.StringValue(props["location"])
 	} else {
 		resp.Diagnostics.AddWarning("Database in unexpected state", "Database did not have location table property set")
 	}
@@ -164,10 +170,10 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	var data databaseResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
-	database := data.Name.ValueString()
+	databaseId := data.Id.ValueString()
 	warehouseId := data.WarehouseId.ValueString()
 
-	err := r.client.V1.DeleteDatabase(warehouseId, database)
+	_, err := r.client.V2.DefaultAPI.DeleteDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting database", err.Error())
 		return

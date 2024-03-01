@@ -80,7 +80,7 @@ func (r *storageProfileS3Resource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	storageProfileId := state.Id.ValueString()
-	storageProfile, _, err := r.client.V2.DefaultApi.GetStorageProfile(ctx, *r.client.OrganizationId, storageProfileId).Execute()
+	storageProfile, _, err := r.client.V2.DefaultAPI.GetStorageProfile(ctx, *r.client.OrganizationId, storageProfileId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting storage profile", "Could not get storage profile "+err.Error())
 	}
@@ -123,7 +123,7 @@ func (r *storageProfileS3Resource) Create(ctx context.Context, req resource.Crea
 	s3Bucket := plan.Bucket.ValueString()
 	iamRoleArn := plan.RoleArn.ValueString()
 
-	storageProfileResponse, _, err := r.client.V2.DefaultApi.CreateStorageProfile(ctx, *r.client.OrganizationId).
+	storageProfileResponse, _, err := r.client.V2.DefaultAPI.CreateStorageProfile(ctx, *r.client.OrganizationId).
 		CreateS3StorageProfileRequest(tabular.CreateS3StorageProfileRequest{
 			Region:  &region,
 			Bucket:  &s3Bucket,
@@ -181,7 +181,7 @@ func (r *storageProfileS3Resource) Delete(ctx context.Context, req resource.Dele
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	storageProfileId := state.Id.ValueString()
-	_, err := r.client.V2.DefaultApi.DeleteStorageProfile(ctx, *r.client.OrganizationId, storageProfileId).Execute()
+	_, err := r.client.V2.DefaultAPI.DeleteStorageProfile(ctx, *r.client.OrganizationId, storageProfileId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting storage profile", "Unable to delete storage profile "+err.Error())
 	}

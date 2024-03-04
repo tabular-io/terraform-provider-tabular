@@ -165,8 +165,8 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.8.3 h1:RP3t2pwF7cMEbC1dqtB6poj3niw/9gnV4Cjg5oW5gtY=
 github.com/stretchr/testify v1.8.3/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/tabular-io/tabular-sdk-go v1.0.2 h1:UzJULCUZjk3/lnwL6e500n5JlWT6tOUnGnVRnCrDFTI=
-github.com/tabular-io/tabular-sdk-go v1.0.2/go.mod h1:yw3x/40rog4LAg8gNaXAMlwfLZ9NBALovGuZb31fGOo=
+github.com/tabular-io/tabular-sdk-go v1.0.4 h1:vqOxnLC1ahI8tIaQVnAUjuu/8ZqnqwsSp94KTldychQ=
+github.com/tabular-io/tabular-sdk-go v1.0.4/go.mod h1:WCiZVZvrXBi73BKeHTjTeJ4SNsFDo/6MRNf1FBubWc0=
 github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
 github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=

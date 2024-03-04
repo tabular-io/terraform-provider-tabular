@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = &roleDatabaseGrantsResource{}
-	_ resource.ResourceWithConfigure   = &roleDatabaseGrantsResource{}
-	_ resource.ResourceWithImportState = &roleDatabaseGrantsResource{}
+	_ resource.Resource                 = &roleDatabaseGrantsResource{}
+	_ resource.ResourceWithConfigure    = &roleDatabaseGrantsResource{}
+	_ resource.ResourceWithImportState  = &roleDatabaseGrantsResource{}
+	_ resource.ResourceWithUpgradeState = &roleDatabaseGrantsResource{}
 )
 
 type roleDatabaseGrantsResource struct {
@@ -38,6 +39,23 @@ func NewRoleDatabaseGrantsResource() resource.Resource {
 	return &roleDatabaseGrantsResource{}
 }
 
+type roleDatabaseGrantsModelV0 struct {
+	RoleName            types.String `tfsdk:"role_name"`
+	WarehouseId         types.String `tfsdk:"warehouse_id"`
+	Database            types.String `tfsdk:"database"`
+	Privileges          types.Set    `tfsdk:"privileges"`
+	PrivilegesWithGrant types.Set    `tfsdk:"privileges_with_grant"`
+}
+
+type roleDatabaseGrantsModelV1 struct {
+	Id                  types.String `tfsdk:"id"`
+	RoleId              types.String `tfsdk:"role_id"`
+	WarehouseId         types.String `tfsdk:"warehouse_id"`
+	DatabaseId          types.String `tfsdk:"database_id"`
+	Privileges          types.Set    `tfsdk:"privileges"`
+	PrivilegesWithGrant types.Set    `tfsdk:"privileges_with_grant"`
+}
+
 type roleDatabaseGrantsModel struct {
 	Id                  types.String `tfsdk:"id"`
 	RoleId              types.String `tfsdk:"role_id"`
@@ -53,6 +71,7 @@ func (r *roleDatabaseGrantsResource) Metadata(ctx context.Context, req resource.
 
 func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     1,
 		Description: "Manages the grants a role has for a database.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -96,17 +115,115 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 func (r *roleDatabaseGrantsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	parts := strings.SplitN(req.ID, "/", 3)
 	if len(parts) != 3 {
-		resp.Diagnostics.AddError("Invalid role database grant specifier", "Expected three part value, split by a /")
+		resp.Diagnostics.AddError("Invalid role database grant specifier", "Expected warehouseId/databaseId/roleName")
 	}
+	roleResp, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, parts[2]).Execute()
+
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to fetch role id for %s", parts[2])
+	}
+
+	warehouseId := parts[0]
+	databaseId := parts[1]
+	roleId := *roleResp.Id
+
 	state := roleDatabaseGrantsModel{
-		WarehouseId:         types.StringValue(parts[0]),
-		DatabaseId:          types.StringValue(parts[1]),
-		RoleId:              types.StringValue(parts[2]),
+		Id:                  types.StringValue(fmt.Sprintf("%s/%s/%s", warehouseId, databaseId, roleId)),
+		WarehouseId:         types.StringValue(warehouseId),
+		DatabaseId:          types.StringValue(databaseId),
+		RoleId:              types.StringValue(roleId),
 		Privileges:          types.SetUnknown(types.StringType),
 		PrivilegesWithGrant: types.SetUnknown(types.StringType),
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+func (r *roleDatabaseGrantsResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		// Add Id and RoleId attributes to role_database_grants v0 resource
+		0: {
+			PriorSchema: &schema.Schema{
+				Attributes: map[string]schema.Attribute{
+					"role_name": schema.StringAttribute{
+						Description: "Role Name",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"warehouse_id": schema.StringAttribute{
+						Description: "Warehouse ID (uuid)",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"database": schema.StringAttribute{
+						Description: "Database Name",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"privileges": schema.SetAttribute{
+						Optional:    true,
+						Computed:    true,
+						ElementType: types.StringType,
+						Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
+						Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
+					},
+					"privileges_with_grant": schema.SetAttribute{
+						Optional:    true,
+						Computed:    true,
+						ElementType: types.StringType,
+						Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
+						Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
+					},
+				},
+			},
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var priorStateData roleDatabaseGrantsModelV0
+
+				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
+
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				roleResp, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, priorStateData.RoleName.ValueString()).Execute()
+
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to fetch role id for %s", priorStateData.RoleName.ValueString())
+					return
+				}
+
+				roleId := roleResp.Id
+
+				databaseResp, _, err := r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId,
+					priorStateData.WarehouseId.ValueString(),
+					priorStateData.Database.ValueString()).Execute()
+
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to fetch database id for %s", priorStateData.Database.ValueString())
+					return
+				}
+
+				databaseId := *databaseResp.Id
+
+				upgradedStateData := roleDatabaseGrantsModelV1{
+					Id:                  types.StringValue(fmt.Sprintf("%s/%s/%s", priorStateData.WarehouseId, databaseId, *roleId)),
+					DatabaseId:          types.StringValue(databaseId),
+					RoleId:              types.StringValue(*roleId),
+					WarehouseId:         priorStateData.WarehouseId,
+					Privileges:          priorStateData.Privileges,
+					PrivilegesWithGrant: priorStateData.PrivilegesWithGrant,
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
+			},
+		},
+	}
 }
 
 func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = &databaseResource{}
-	_ resource.ResourceWithConfigure   = &databaseResource{}
-	_ resource.ResourceWithImportState = &databaseResource{}
+	_ resource.Resource                 = &databaseResource{}
+	_ resource.ResourceWithConfigure    = &databaseResource{}
+	_ resource.ResourceWithImportState  = &databaseResource{}
+	_ resource.ResourceWithUpgradeState = &databaseResource{}
 )
 
 type databaseResource struct {
@@ -25,6 +26,19 @@ type databaseResource struct {
 
 func NewDatabaseResource() resource.Resource {
 	return &databaseResource{}
+}
+
+type databaseResourceModelV0 struct {
+	WarehouseId types.String `tfsdk:"warehouse_id"`
+	Name        types.String `tfsdk:"name"`
+	Location    types.String `tfsdk:"location"`
+}
+
+type databaseResourceModelV1 struct {
+	Id          types.String `tfsdk:"id"`
+	WarehouseId types.String `tfsdk:"warehouse_id"`
+	Name        types.String `tfsdk:"name"`
+	Location    types.String `tfsdk:"location"`
 }
 
 type databaseResourceModel struct {
@@ -48,6 +62,7 @@ func (r *databaseResource) Metadata(ctx context.Context, req resource.MetadataRe
 
 func (r *databaseResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     1,
 		Description: "A Tabular Database",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -82,7 +97,7 @@ func (r *databaseResource) Schema(ctx context.Context, req resource.SchemaReques
 func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	parts := strings.SplitN(req.ID, "/", 1)
 	if len(parts) != 2 {
-		resp.Diagnostics.AddError("Could not parse ", "Expected two part value, split by a /")
+		resp.Diagnostics.AddError("Could not parse ", "Expected warehouseId/databaseId")
 	}
 	state := databaseResourceModel{
 		WarehouseId: types.StringValue(parts[0]),
@@ -90,6 +105,63 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+func (r *databaseResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		// Add Id attribute to database v0 resources
+		0: {
+			PriorSchema: &schema.Schema{
+				Attributes: map[string]schema.Attribute{
+					"warehouse_id": schema.StringAttribute{
+						Description: "Warehouse ID (uuid)",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"name": schema.StringAttribute{
+						Description: "Database Name",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"location": schema.StringAttribute{
+						Description: "Storage Location",
+						Computed:    true,
+					},
+				},
+			},
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var priorStateData databaseResourceModelV0
+
+				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
+
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				databaseResp, _, err := r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId,
+					priorStateData.WarehouseId.ValueString(),
+					priorStateData.Name.ValueString()).Execute()
+
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to fetch database id for %s", priorStateData.Name.ValueString())
+					return
+				}
+
+				upgradedStateData := databaseResourceModelV1{
+					Id:          types.StringValue(*databaseResp.Id),
+					WarehouseId: priorStateData.WarehouseId,
+					Name:        priorStateData.Name,
+					Location:    priorStateData.Location,
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
+			},
+		},
+	}
 }
 
 func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

@@ -27,9 +27,9 @@ resource "tabular_database" "database" {
 }
 
 resource "tabular_role_database_grants" "grants" {
-  role_name    = tabular_role.example.name
+  role_id      = tabular_role.example.id
   warehouse_id = data.tabular_warehouse.warehouse.id
-  database     = tabular_database.database.name
+  database_id  = tabular_database.database.id
   privileges   = [
     "LIST_TABLES",
   ]
@@ -44,14 +44,18 @@ resource "tabular_role_database_grants" "grants" {
 
 ### Required
 
-- `database` (String) Database Name
-- `role_name` (String) Role Name
+- `database_id` (String) Database Id
+- `role_id` (String) Role Id
 - `warehouse_id` (String) Warehouse ID (uuid)
 
 ### Optional
 
-- `privileges` (Set of String) Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE
-- `privileges_with_grant` (Set of String) Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE
+- `privileges` (Set of String) Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE, FUTURE_MANAGE_GRANTS_DATABASE, FUTURE_MANAGE_GRANTS_TABLE
+- `privileges_with_grant` (Set of String) Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE, FUTURE_MANAGE_GRANTS_DATABASE, FUTURE_MANAGE_GRANTS_TABLE
+
+### Read-Only
+
+- `id` (String) Terraform resource id
 
 ## Import
 

@@ -74,12 +74,12 @@ func (r *roleWarehouseGrantsResource) Schema(ctx context.Context, req resource.S
 			"privileges": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "Allowed Values: MODIFY_WAREHOUSE, LIST_DATABASES, CREATE_DATABASE, FUTURE_MODIFY_DATABASE, FUTURE_LIST_TABLES, FUTURE_CREATE_TABLE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_MODIFY_TABLE",
+				Description: "Allowed Values: MODIFY_WAREHOUSE, LIST_DATABASES, CREATE_DATABASE, FUTURE_MODIFY_DATABASE, FUTURE_LIST_TABLES, FUTURE_CREATE_TABLE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE, FUTURE_MANAGE_GRANTS_DATABASE, FUTURE_MANAGE_GRANTS_TABLE",
 			},
 			"privileges_with_grant": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "Allowed Values: MODIFY_WAREHOUSE, LIST_DATABASES, CREATE_DATABASE, FUTURE_MODIFY_DATABASE, FUTURE_LIST_TABLES, FUTURE_CREATE_TABLE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_MODIFY_TABLE",
+				Description: "Allowed Values: MODIFY_WAREHOUSE, LIST_DATABASES, CREATE_DATABASE, FUTURE_MODIFY_DATABASE, FUTURE_LIST_TABLES, FUTURE_CREATE_TABLE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_MODIFY_TABLE, FUTURE_MANAGE_GRANTS_DATABASE, FUTURE_MANAGE_GRANTS_TABLE",
 			},
 		},
 	}
@@ -96,7 +96,7 @@ func (r *roleWarehouseGrantsResource) Read(ctx context.Context, req resource.Rea
 	warehouseId := state.WarehouseId.ValueString()
 	roleId := state.RoleId.ValueString()
 
-	warehouseGrants, _, err := r.client.V2.DefaultApi.GetRoleWarehouseGrants(ctx, *r.client.OrganizationId, warehouseId, roleId).Execute()
+	warehouseGrants, _, err := r.client.V2.DefaultAPI.ListWarehouseRoleGrantsForRole(ctx, *r.client.OrganizationId, warehouseId, roleId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting role grants", "Could not get grants for warehouse "+err.Error())
 	}
@@ -145,7 +145,7 @@ func (r *roleWarehouseGrantsResource) Create(ctx context.Context, req resource.C
 		warehousePrivilegeRequest(planPrivileges, false, roleId),
 		warehousePrivilegeRequest(planPrivilegesWithGrant, true, roleId)...)
 
-	_, err := r.client.V2.DefaultApi.GrantPrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).
+	_, err := r.client.V2.DefaultAPI.GrantPrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).
 		RoleWarehouseGrantRequest(roleWarehouseGrantRequest).
 		Execute()
 	if err != nil {
@@ -185,7 +185,7 @@ func (r *roleWarehouseGrantsResource) Update(ctx context.Context, req resource.U
 		warehousePrivilegeRequest(privilegesToRemoveWithGrant, true, roleId)...)
 
 	if len(privilegesToRemoveRequest) > 0 {
-		_, err := r.client.V2.DefaultApi.RevokePrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).
+		_, err := r.client.V2.DefaultAPI.RevokePrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).
 			RoleWarehouseGrantRequest(privilegesToRemoveRequest).
 			Execute()
 		if err != nil {
@@ -204,7 +204,7 @@ func (r *roleWarehouseGrantsResource) Update(ctx context.Context, req resource.U
 		warehousePrivilegeRequest(privilegesToAddWithGrant, true, roleId)...)
 
 	if len(privilegesToAddRequest) > 0 {
-		_, err := r.client.V2.DefaultApi.GrantPrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).
+		_, err := r.client.V2.DefaultAPI.GrantPrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).
 			RoleWarehouseGrantRequest(privilegesToAddRequest).
 			Execute()
 		if err != nil {
@@ -240,7 +240,7 @@ func (r *roleWarehouseGrantsResource) Delete(ctx context.Context, req resource.D
 		warehousePrivilegeRequest(statePrivileges, false, roleId),
 		warehousePrivilegeRequest(statePrivilegesWithGrant, true, roleId)...)
 
-	_, err := r.client.V2.DefaultApi.RevokePrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).RoleWarehouseGrantRequest(roleWarehouseGrantRequest).Execute()
+	_, err := r.client.V2.DefaultAPI.RevokePrivilegesOnWarehouse(ctx, *r.client.OrganizationId, warehouseId).RoleWarehouseGrantRequest(roleWarehouseGrantRequest).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to revoke grants", "Unable to revoke grants"+err.Error())
 	}

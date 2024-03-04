@@ -2,26 +2,25 @@ package provider
 
 import (
 	"context"
-	"strings"
-
-	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/path"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/tabular-io/tabular-sdk-go/tabular"
 	"github.com/tabular-io/terraform-provider-tabular/internal"
 	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
 	"github.com/tabular-io/terraform-provider-tabular/internal/provider/validators"
+	"strings"
 )
 
 var (
-	_ resource.Resource                = &roleDatabaseGrantsResource{}
-	_ resource.ResourceWithConfigure   = &roleDatabaseGrantsResource{}
-	_ resource.ResourceWithImportState = &roleDatabaseGrantsResource{}
-	_ resource.ResourceWithModifyPlan  = &roleDatabaseGrantsResource{}
+	_ resource.Resource                 = &roleDatabaseGrantsResource{}
+	_ resource.ResourceWithConfigure    = &roleDatabaseGrantsResource{}
+	_ resource.ResourceWithImportState  = &roleDatabaseGrantsResource{}
+	_ resource.ResourceWithUpgradeState = &roleDatabaseGrantsResource{}
 )
 
 type roleDatabaseGrantsResource struct {
@@ -40,10 +39,28 @@ func NewRoleDatabaseGrantsResource() resource.Resource {
 	return &roleDatabaseGrantsResource{}
 }
 
-type roleDatabaseGrantsModel struct {
+type roleDatabaseGrantsModelV0 struct {
 	RoleName            types.String `tfsdk:"role_name"`
 	WarehouseId         types.String `tfsdk:"warehouse_id"`
 	Database            types.String `tfsdk:"database"`
+	Privileges          types.Set    `tfsdk:"privileges"`
+	PrivilegesWithGrant types.Set    `tfsdk:"privileges_with_grant"`
+}
+
+type roleDatabaseGrantsModelV1 struct {
+	Id                  types.String `tfsdk:"id"`
+	RoleId              types.String `tfsdk:"role_id"`
+	WarehouseId         types.String `tfsdk:"warehouse_id"`
+	DatabaseId          types.String `tfsdk:"database_id"`
+	Privileges          types.Set    `tfsdk:"privileges"`
+	PrivilegesWithGrant types.Set    `tfsdk:"privileges_with_grant"`
+}
+
+type roleDatabaseGrantsModel struct {
+	Id                  types.String `tfsdk:"id"`
+	RoleId              types.String `tfsdk:"role_id"`
+	WarehouseId         types.String `tfsdk:"warehouse_id"`
+	DatabaseId          types.String `tfsdk:"database_id"`
 	Privileges          types.Set    `tfsdk:"privileges"`
 	PrivilegesWithGrant types.Set    `tfsdk:"privileges_with_grant"`
 }
@@ -54,14 +71,19 @@ func (r *roleDatabaseGrantsResource) Metadata(ctx context.Context, req resource.
 
 func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     1,
 		Description: "Manages the grants a role has for a database.",
 		Attributes: map[string]schema.Attribute{
-			"role_name": schema.StringAttribute{
-				Description: "Role Name",
-				Required:    true,
+			"id": schema.StringAttribute{
+				Description: "Terraform resource id",
+				Computed:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"role_id": schema.StringAttribute{
+				Description: "Role Id",
+				Required:    true,
 			},
 			"warehouse_id": schema.StringAttribute{
 				Description: "Warehouse ID (uuid)",
@@ -70,26 +92,21 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"database": schema.StringAttribute{
-				Description: "Database Name",
+			"database_id": schema.StringAttribute{
+				Description: "Database Id",
 				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"privileges": schema.SetAttribute{
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
-				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
+				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE, FUTURE_MANAGE_GRANTS_DATABASE, FUTURE_MANAGE_GRANTS_TABLE",
 			},
 			"privileges_with_grant": schema.SetAttribute{
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
 				Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
-				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
+				Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE, FUTURE_MANAGE_GRANTS_DATABASE, FUTURE_MANAGE_GRANTS_TABLE",
 			},
 		},
 	}
@@ -98,17 +115,115 @@ func (r *roleDatabaseGrantsResource) Schema(ctx context.Context, req resource.Sc
 func (r *roleDatabaseGrantsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	parts := strings.SplitN(req.ID, "/", 3)
 	if len(parts) != 3 {
-		resp.Diagnostics.AddError("Invalid role database grant specifier", "Expected three part value, split by a /")
+		resp.Diagnostics.AddError("Invalid role database grant specifier", "Expected warehouseId/databaseId/roleName")
 	}
+	roleResp, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, parts[2]).Execute()
+
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to fetch role id for %s", parts[2])
+	}
+
+	warehouseId := parts[0]
+	databaseId := parts[1]
+	roleId := *roleResp.Id
+
 	state := roleDatabaseGrantsModel{
-		WarehouseId:         types.StringValue(parts[0]),
-		Database:            types.StringValue(parts[1]),
-		RoleName:            types.StringValue(parts[2]),
+		Id:                  types.StringValue(fmt.Sprintf("%s/%s/%s", warehouseId, databaseId, roleId)),
+		WarehouseId:         types.StringValue(warehouseId),
+		DatabaseId:          types.StringValue(databaseId),
+		RoleId:              types.StringValue(roleId),
 		Privileges:          types.SetUnknown(types.StringType),
 		PrivilegesWithGrant: types.SetUnknown(types.StringType),
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
+}
+
+func (r *roleDatabaseGrantsResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		// Add Id and RoleId attributes to role_database_grants v0 resource
+		0: {
+			PriorSchema: &schema.Schema{
+				Attributes: map[string]schema.Attribute{
+					"role_name": schema.StringAttribute{
+						Description: "Role Name",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"warehouse_id": schema.StringAttribute{
+						Description: "Warehouse ID (uuid)",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"database": schema.StringAttribute{
+						Description: "Database Name",
+						Required:    true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+					},
+					"privileges": schema.SetAttribute{
+						Optional:    true,
+						Computed:    true,
+						ElementType: types.StringType,
+						Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
+						Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
+					},
+					"privileges_with_grant": schema.SetAttribute{
+						Optional:    true,
+						Computed:    true,
+						ElementType: types.StringType,
+						Validators:  []validator.Set{validators.PrivilegeSetValidator{}},
+						Description: "Allowed Values: CREATE_TABLE, LIST_TABLES, MODIFY_DATABASE, FUTURE_SELECT, FUTURE_UPDATE, FUTURE_DROP_TABLE",
+					},
+				},
+			},
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				var priorStateData roleDatabaseGrantsModelV0
+
+				resp.Diagnostics.Append(req.State.Get(ctx, &priorStateData)...)
+
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				roleResp, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, priorStateData.RoleName.ValueString()).Execute()
+
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to fetch role id for %s", priorStateData.RoleName.ValueString())
+					return
+				}
+
+				roleId := roleResp.Id
+
+				databaseResp, _, err := r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId,
+					priorStateData.WarehouseId.ValueString(),
+					priorStateData.Database.ValueString()).Execute()
+
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to fetch database id for %s", priorStateData.Database.ValueString())
+					return
+				}
+
+				databaseId := *databaseResp.Id
+
+				upgradedStateData := roleDatabaseGrantsModelV1{
+					Id:                  types.StringValue(fmt.Sprintf("%s/%s/%s", priorStateData.WarehouseId, databaseId, *roleId)),
+					DatabaseId:          types.StringValue(databaseId),
+					RoleId:              types.StringValue(*roleId),
+					WarehouseId:         priorStateData.WarehouseId,
+					Privileges:          priorStateData.Privileges,
+					PrivilegesWithGrant: priorStateData.PrivilegesWithGrant,
+				}
+
+				resp.Diagnostics.Append(resp.State.Set(ctx, upgradedStateData)...)
+			},
+		},
+	}
 }
 
 func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -120,31 +235,31 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 	}
 
 	warehouseId := state.WarehouseId.ValueString()
-	database := state.Database.ValueString()
-	roleName := state.RoleName.ValueString()
-	grants, err := r.client.V1.GetRoleDatabaseGrants(warehouseId, database, roleName)
+	databaseId := state.DatabaseId.ValueString()
+	roleId := state.RoleId.ValueString()
+	databaseGrants, _, err := r.client.V2.DefaultAPI.ListDatabaseRoleGrantsForRole(ctx, *r.client.OrganizationId, warehouseId, databaseId, roleId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error fetching grants for role", err.Error())
 		return
 	}
-	if grants == nil {
-		resp.State.RemoveResource(ctx)
-		return
+
+	var privileges []string
+	var privilegesWithGrant []string
+
+	for _, grant := range databaseGrants.Authorizations {
+		if *grant.WithGrant {
+			privilegesWithGrant = append(privilegesWithGrant, *grant.Privilege)
+		} else {
+			privileges = append(privileges, *grant.Privilege)
+		}
 	}
 
-	if grants.Privileges == nil {
-		state.Privileges = types.SetNull(types.StringType)
-	} else {
-		state.Privileges, diags = types.SetValueFrom(ctx, types.StringType, grants.Privileges)
-		resp.Diagnostics.Append(diags...)
-	}
+	state.Privileges, diags = types.SetValueFrom(ctx, types.StringType, privileges)
+	resp.Diagnostics.Append(diags...)
+	state.PrivilegesWithGrant, diags = types.SetValueFrom(ctx, types.StringType, privilegesWithGrant)
+	resp.Diagnostics.Append(diags...)
 
-	if grants.PrivilegesWithGrant == nil {
-		state.PrivilegesWithGrant = types.SetNull(types.StringType)
-	} else {
-		state.PrivilegesWithGrant, diags = types.SetValueFrom(ctx, types.StringType, grants.PrivilegesWithGrant)
-		resp.Diagnostics.Append(diags...)
-	}
+	state.Id = types.StringValue(fmt.Sprintf("%s/%s/%s", warehouseId, databaseId, roleId))
 
 	if resp.Diagnostics.HasError() {
 		return
@@ -161,29 +276,28 @@ func (r *roleDatabaseGrantsResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	warehouseId := plan.WarehouseId.ValueString()
-	database := plan.Database.ValueString()
-	roleName := plan.RoleName.ValueString()
+	databaseId := plan.DatabaseId.ValueString()
+	roleId := plan.RoleId.ValueString()
 
-	var planPrivs, planPrivsWithGrant []string
-	resp.Diagnostics.Append(plan.Privileges.ElementsAs(ctx, &planPrivs, false)...)
-	resp.Diagnostics.Append(plan.PrivilegesWithGrant.ElementsAs(ctx, &planPrivsWithGrant, false)...)
+	var planPrivileges, planPrivilegesWithGrant []string
+	resp.Diagnostics.Append(plan.Privileges.ElementsAs(ctx, &planPrivileges, false)...)
+	resp.Diagnostics.Append(plan.PrivilegesWithGrant.ElementsAs(ctx, &planPrivilegesWithGrant, false)...)
 
-	err := r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, planPrivsWithGrant, true)
+	var roleDatabaseGrantRequest []tabular.RoleDatabaseGrantRequest
+	roleDatabaseGrantRequest = append(
+		databasePrivilegeRequest(planPrivileges, false, roleId),
+		databasePrivilegeRequest(planPrivilegesWithGrant, true, roleId)...)
+
+	httpResp, err := r.client.V2.DefaultAPI.GrantPrivilegesOnDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).
+		RoleDatabaseGrantRequest(roleDatabaseGrantRequest).
+		Execute()
 	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges_with_grant"),
-			"Failure adding privileges with grant",
-			err.Error(),
-		)
+		errResp, _ := tabular.ParseErrorResponse(httpResp.Body)
+		resp.Diagnostics.AddError("Error creating database role grant", fmt.Sprintf("Received %s %s", httpResp.Status, errResp.Error.Type))
+		return
 	}
-	err = r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, planPrivs, false)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges"),
-			"Failure adding privileges",
-			err.Error(),
-		)
-	}
+
+	plan.Id = types.StringValue(fmt.Sprintf("%s/%s/%s", warehouseId, databaseId, roleId))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
@@ -197,51 +311,51 @@ func (r *roleDatabaseGrantsResource) Update(ctx context.Context, req resource.Up
 	}
 
 	warehouseId := plan.WarehouseId.ValueString()
-	database := plan.Database.ValueString()
-	roleName := plan.RoleName.ValueString()
+	databaseId := plan.DatabaseId.ValueString()
+	roleId := plan.RoleId.ValueString()
 
-	var planPrivs, statePrivs, planPrivsWithGrant, statePrivsWithGrant []string
-	resp.Diagnostics.Append(plan.Privileges.ElementsAs(ctx, &planPrivs, false)...)
-	resp.Diagnostics.Append(plan.PrivilegesWithGrant.ElementsAs(ctx, &planPrivsWithGrant, false)...)
-	resp.Diagnostics.Append(state.Privileges.ElementsAs(ctx, &statePrivs, false)...)
-	resp.Diagnostics.Append(state.PrivilegesWithGrant.ElementsAs(ctx, &statePrivsWithGrant, false)...)
+	var planPrivileges, planPrivilegesWithGrant []string
+	resp.Diagnostics.Append(plan.Privileges.ElementsAs(ctx, &planPrivileges, false)...)
+	resp.Diagnostics.Append(plan.PrivilegesWithGrant.ElementsAs(ctx, &planPrivilegesWithGrant, false)...)
 
-	withGrantToRemove := internal.Difference(statePrivsWithGrant, planPrivsWithGrant)
-	toRemove := internal.Difference(statePrivs, planPrivs)
-	withGrantToAdd := internal.Difference(planPrivsWithGrant, statePrivsWithGrant)
-	toAdd := internal.Difference(planPrivs, statePrivs)
+	var statePlanPrivileges, statePlanPrivilegesWithGrant []string
+	resp.Diagnostics.Append(state.Privileges.ElementsAs(ctx, &statePlanPrivileges, false)...)
+	resp.Diagnostics.Append(state.PrivilegesWithGrant.ElementsAs(ctx, &statePlanPrivilegesWithGrant, false)...)
 
-	err := r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, withGrantToRemove, true)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges_with_grant"),
-			"Failure removing privileges with grant",
-			err.Error(),
-		)
+	// Remove privileges
+	privilegesToRemove := internal.Difference(statePlanPrivileges, planPrivileges)
+	privilegesToRemoveWithGrant := internal.Difference(statePlanPrivilegesWithGrant, planPrivilegesWithGrant)
+	privilegesToRemoveRequest := append(
+		databasePrivilegeRequest(privilegesToRemove, false, roleId),
+		databasePrivilegeRequest(privilegesToRemoveWithGrant, true, roleId)...)
+
+	if len(privilegesToRemoveRequest) > 0 {
+		_, err := r.client.V2.DefaultAPI.RevokePrivilegesOnDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).
+			RoleDatabaseGrantRequest(privilegesToRemoveRequest).
+			Execute()
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to revoke grant", "Unable to revoke grant"+err.Error())
+			return
+		}
 	}
-	err = r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, toRemove, false)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges"),
-			"Failure removing privileges",
-			err.Error(),
-		)
-	}
-	err = r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, withGrantToAdd, true)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges_with_grant"),
-			"Failure adding privileges with grant",
-			err.Error(),
-		)
-	}
-	err = r.client.V1.AddRoleDatabaseGrants(warehouseId, database, roleName, toAdd, false)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges"),
-			"Failure adding privileges",
-			err.Error(),
-		)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
+
+	// Add privileges
+	privilegesToAdd := internal.Difference(planPrivileges, statePlanPrivileges)
+	privilegesToAddWithGrant := internal.Difference(planPrivilegesWithGrant, statePlanPrivilegesWithGrant)
+	privilegesToAddRequest := append(
+		databasePrivilegeRequest(privilegesToAdd, false, roleId),
+		databasePrivilegeRequest(privilegesToAddWithGrant, true, roleId)...)
+
+	if len(privilegesToAddRequest) > 0 {
+		_, err := r.client.V2.DefaultAPI.GrantPrivilegesOnDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).
+			RoleDatabaseGrantRequest(privilegesToAddRequest).
+			Execute()
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to create grant", "Unable to create grant"+err.Error())
+			return
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
@@ -255,28 +369,27 @@ func (r *roleDatabaseGrantsResource) Delete(ctx context.Context, req resource.De
 	}
 
 	warehouseId := state.WarehouseId.ValueString()
-	database := state.Database.ValueString()
-	roleName := state.RoleName.ValueString()
+	databaseId := state.DatabaseId.ValueString()
+	roleId := state.RoleId.ValueString()
 
-	var statePrivs, statePrivsWithGrant []string
-	resp.Diagnostics.Append(state.Privileges.ElementsAs(ctx, &statePrivs, false)...)
-	resp.Diagnostics.Append(state.PrivilegesWithGrant.ElementsAs(ctx, &statePrivsWithGrant, false)...)
+	var statePrivileges, statePrivilegesWithGrant []string
+	resp.Diagnostics.Append(state.Privileges.ElementsAs(ctx, &statePrivileges, false)...)
+	resp.Diagnostics.Append(state.PrivilegesWithGrant.ElementsAs(ctx, &statePrivilegesWithGrant, false)...)
 
-	err := r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, statePrivsWithGrant, true)
-	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges_with_grant"),
-			"Failure removing privileges with grant",
-			err.Error(),
-		)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	err = r.client.V1.RevokeRoleDatabaseGrants(warehouseId, database, roleName, statePrivs, false)
+
+	var roleWarehouseGrantRequest []tabular.RoleDatabaseGrantRequest
+	roleWarehouseGrantRequest = append(
+		databasePrivilegeRequest(statePrivileges, false, roleId),
+		databasePrivilegeRequest(statePrivilegesWithGrant, true, roleId)...)
+
+	_, err := r.client.V2.DefaultAPI.RevokePrivilegesOnDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).
+		RoleDatabaseGrantRequest(roleWarehouseGrantRequest).
+		Execute()
 	if err != nil {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("privileges"),
-			"Failure removing privileges",
-			err.Error(),
-		)
+		resp.Diagnostics.AddError("Unable to revoke grants", "Unable to revoke grants"+err.Error())
 	}
 
 	if resp.Diagnostics.HasError() {
@@ -286,20 +399,16 @@ func (r *roleDatabaseGrantsResource) Delete(ctx context.Context, req resource.De
 	resp.State.RemoveResource(ctx)
 }
 
-func (r *roleDatabaseGrantsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	var plan roleDatabaseGrantsModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
+func databasePrivilegeRequest(privileges []string, withGrant bool, roleId string) []tabular.RoleDatabaseGrantRequest {
+	var roleDatabaseGrantRequest []tabular.RoleDatabaseGrantRequest
+	for _, privilege := range privileges {
+		// https://go.dev/blog/loopvar-preview
+		privilegeCopy := privilege
+		roleDatabaseGrantRequest = append(roleDatabaseGrantRequest, tabular.RoleDatabaseGrantRequest{
+			RoleId:    &roleId,
+			Privilege: &privilegeCopy,
+			WithGrant: &withGrant,
+		})
 	}
-
-	// Treat an empty list, null, and (known after apply) for privileges (w/ or w/o grant) interchangeably
-	if plan.Privileges.IsUnknown() || plan.Privileges.IsNull() {
-		plan.Privileges = types.SetValueMust(types.StringType, []attr.Value{})
-	}
-	if plan.PrivilegesWithGrant.IsUnknown() || plan.PrivilegesWithGrant.IsNull() {
-		plan.PrivilegesWithGrant = types.SetValueMust(types.StringType, []attr.Value{})
-	}
-
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, plan)...)
+	return roleDatabaseGrantRequest
 }

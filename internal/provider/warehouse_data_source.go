@@ -95,7 +95,7 @@ func (d *WarehouseDataSource) Read(ctx context.Context, req datasource.ReadReque
 		getWarehouseByName(*d.client.V1, data, resp.Diagnostics)
 	} else {
 		warehouseId := data.Id.ValueString()
-		warehouse, _, err := d.client.V2.DefaultApi.GetWarehouse(ctx, *d.client.OrganizationId, warehouseId).Execute()
+		warehouse, _, err := d.client.V2.DefaultAPI.GetWarehouse(ctx, *d.client.OrganizationId, warehouseId).Execute()
 		if err != nil {
 			resp.Diagnostics.AddError("Warehouse not found", err.Error())
 			return

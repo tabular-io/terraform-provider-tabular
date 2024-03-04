@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/tabular-io/tabular-sdk-go/tabular"
 	"github.com/tabular-io/terraform-provider-tabular/internal/provider/util"
@@ -48,6 +50,9 @@ func (r *warehouseResource) Schema(ctx context.Context, req resource.SchemaReque
 			"id": schema.StringAttribute{
 				Description: "Warehouse ID",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Description: "Warehouse name",
@@ -78,7 +83,7 @@ func (r *warehouseResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	warehouseId := state.Id.ValueString()
-	warehouse, _, err := r.client.V2.DefaultApi.GetWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute()
+	warehouse, _, err := r.client.V2.DefaultAPI.GetWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting warehouse", "Could not get warehouse "+err.Error())
 	}
@@ -106,7 +111,7 @@ func (r *warehouseResource) Create(ctx context.Context, req resource.CreateReque
 
 	warehouseName := plan.Name.ValueString()
 	storageProfileId := plan.StorageProfile.ValueString()
-	warehouseResponse, _, err := r.client.V2.DefaultApi.CreateWarehouse(ctx, *r.client.OrganizationId).
+	warehouseResponse, _, err := r.client.V2.DefaultAPI.CreateWarehouse(ctx, *r.client.OrganizationId).
 		CreateWarehouseRequest(tabular.CreateWarehouseRequest{
 			Name:             &warehouseName,
 			StorageProfileId: &storageProfileId,
@@ -139,7 +144,7 @@ func (r *warehouseResource) Delete(ctx context.Context, req resource.DeleteReque
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	warehouseId := state.Id.ValueString()
-	_, err := r.client.V2.DefaultApi.DeleteWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute()
+	_, err := r.client.V2.DefaultAPI.DeleteWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting warehouse", "Unable to delete warehouse "+err.Error())
 	}

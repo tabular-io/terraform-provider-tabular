@@ -82,7 +82,7 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	roleName := state.Name.ValueString()
-	role, _, err := r.client.V2.DefaultApi.GetRole(ctx, *r.client.OrganizationId, roleName).Execute()
+	role, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, roleName).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+roleName+": "+err.Error())
 		return
@@ -105,7 +105,7 @@ func (r *roleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	roleName := plan.Name.ValueString()
-	createRoleRequest := r.client.V2.DefaultApi.CreateRole(ctx, *r.client.OrganizationId)
+	createRoleRequest := r.client.V2.DefaultAPI.CreateRole(ctx, *r.client.OrganizationId)
 	role, _, err := createRoleRequest.CreateRoleRequest(tabular.CreateRoleRequest{RoleName: &roleName}).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating role", "Could not create role: "+err.Error())
@@ -131,7 +131,7 @@ func (r *roleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	currentName := current.Name.ValueString()
 	targetName := target.Name.ValueString()
 	if currentName != targetName {
-		updateRoleRequest := r.client.V2.DefaultApi.UpdateRoleName(ctx, *r.client.OrganizationId, currentName)
+		updateRoleRequest := r.client.V2.DefaultAPI.UpdateRoleName(ctx, *r.client.OrganizationId, currentName)
 		role, _, err := updateRoleRequest.UpdateRoleRequest(tabular.UpdateRoleRequest{RoleName: &targetName}).Execute()
 		if err != nil {
 			resp.Diagnostics.AddAttributeError(
@@ -157,7 +157,7 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	forceDestroy := data.ForceDestroy.ValueBool()
 	roleName := data.Name.ValueString()
-	_, err := r.client.V2.DefaultApi.DeleteRole(ctx, *r.client.OrganizationId, roleName).Force(forceDestroy).Execute()
+	_, err := r.client.V2.DefaultAPI.DeleteRole(ctx, *r.client.OrganizationId, roleName).Force(forceDestroy).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting role", "Something went wrong. Does the role still have any users/roles/permissions attached to it? Err: "+err.Error())
 		return

@@ -13,7 +13,7 @@ resource "aws_iam_role" "read_write" {
   }
 }
 
-# Create AWS IAM role with the read-write policy
+# Create AWS IAM role with the read-only policy
 resource "aws_iam_role" "read_only" {
   name = "my-role"
   assume_role_policy = data.tabular_aws_iam_policy.default.assume_role_policy

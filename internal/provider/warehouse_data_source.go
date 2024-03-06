@@ -91,11 +91,16 @@ func (d *WarehouseDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
+	GetWarehouseByIdOrName(ctx, *d.client, &data, resp)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func GetWarehouseByIdOrName(ctx context.Context, client util.Client, data *WarehouseDataSourceModel, resp *datasource.ReadResponse) {
 	if data.Id.IsNull() {
-		getWarehouseByName(*d.client.V1, data, resp.Diagnostics)
+		getWarehouseByName(*client.V1, data, resp.Diagnostics)
 	} else {
 		warehouseId := data.Id.ValueString()
-		warehouse, _, err := d.client.V2.DefaultAPI.GetWarehouse(ctx, *d.client.OrganizationId, warehouseId).Execute()
+		warehouse, _, err := client.V2.DefaultAPI.GetWarehouse(ctx, *client.OrganizationId, warehouseId).Execute()
 		if err != nil {
 			resp.Diagnostics.AddError("Warehouse not found", err.Error())
 			return
@@ -125,11 +130,9 @@ func (d *WarehouseDataSource) Read(ctx context.Context, req datasource.ReadReque
 			data.Region = types.StringNull()
 		}
 	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func getWarehouseByName(client tabular.Client, data WarehouseDataSourceModel, diag diag.Diagnostics) {
+func getWarehouseByName(client tabular.Client, data *WarehouseDataSourceModel, diag diag.Diagnostics) {
 	warehouses, err := client.GetWarehouses()
 	if err != nil {
 		diag.AddError("Failed fetching warehouses", err.Error())

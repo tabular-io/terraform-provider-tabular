@@ -1,11 +1,25 @@
 package provider
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"os"
+	"github.com/stretchr/testify/assert"
 )
+
+const testIAMPolicyDataSourceConfig = `
+data "tabular_aws_iam_policy" "test" {
+	bucket = "my-bucket-name"
+}
+`
+
+func TestAWSIAMPolicyValidJSON(t *testing.T) {
+	assert.True(t, json.Valid([]byte(IAMReadWritePolicy("my-bucket-name"))))
+	assert.True(t, json.Valid([]byte(IAMReadOnlyPolicy("my-bucket-name"))))
+	assert.True(t, json.Valid([]byte(AssumeRolePolicy("some-external-id-1234"))))
+}
 
 func TestAWSIAMPolicyDataSource(t *testing.T) {
 	externalId := os.Getenv("TABULAR_ORGANIZATION_ID")
@@ -25,9 +39,3 @@ func TestAWSIAMPolicyDataSource(t *testing.T) {
 		},
 	})
 }
-
-const testIAMPolicyDataSourceConfig = `
-data "tabular_aws_iam_policy" "test" {
-	bucket = "my-bucket-name"
-}
-`

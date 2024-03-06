@@ -127,7 +127,7 @@ func IAMReadOnlyPolicy(bucket string) string {
 			"Action": [
 			  "s3:ListBucket",
 			  "s3:GetBucketLocation",
-			  "s3:GetBucketNotification",
+			  "s3:GetBucketNotification"
 			],
 			"Resource": [
 			  "arn:aws:s3:::%[1]v"
@@ -136,7 +136,7 @@ func IAMReadOnlyPolicy(bucket string) string {
 		  {
 			"Effect": "Allow",
 			"Action": [
-			  "s3:GetObject",
+			  "s3:GetObject"
 			],
 			"Resource": [
 			  "arn:aws:s3:::%[1]v/*"

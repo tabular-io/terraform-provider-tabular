@@ -200,6 +200,7 @@ func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resou
 
 func (p *TabularProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewAWSIAMPolicyDataSource,
 		NewWarehouseDataSource,
 		NewRoleDataSource,
 	}

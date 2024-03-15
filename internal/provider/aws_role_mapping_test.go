@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccRoleMappingAWS(t *testing.T) {
+func TestAccAWSRoleMapping(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%d", rand.Intn(100))
 	iamRoleArn := fmt.Sprintf("arn:aws:iam::123456789012:role/%s", name)
 
@@ -17,27 +17,25 @@ func TestAccRoleMappingAWS(t *testing.T) {
 		ProtoV6ProviderFactories: accProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRoleMappingAWSConfig(name, iamRoleArn),
+				Config: testAccAWSRoleMappingConfig(name, iamRoleArn),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("tabular_role_mapping_aws.default", "name", name),
-					resource.TestCheckResourceAttr("tabular_role_mapping_aws.default", "aws_role_arn", iamRoleArn),
-					resource.TestCheckResourceAttrSet("tabular_role_mapping_aws.default", "id"),
+					resource.TestCheckResourceAttr("tabular_aws_role_mapping.default", "aws_role_arn", iamRoleArn),
+					resource.TestCheckResourceAttrSet("tabular_aws_role_mapping.default", "id"),
 				),
 			},
 		},
 	})
 }
 
-func testAccRoleMappingAWSConfig(name, iamRoleArn string) string {
+func testAccAWSRoleMappingConfig(name, iamRoleArn string) string {
 	return fmt.Sprintf(`
 resource "tabular_role" "default" {
   name = "%s"
 }
 
-resource "tabular_role_mapping_aws" "default" {
-  name    = "%s"
+resource "tabular_aws_role_mapping" "default" {
   role_id = tabular_role.default.id
   aws_role_arn = "%s"
 }
-`, name, name, iamRoleArn)
+`, name, iamRoleArn)
 }

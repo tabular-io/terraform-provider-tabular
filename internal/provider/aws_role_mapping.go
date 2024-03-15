@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -12,27 +13,26 @@ import (
 )
 
 var (
-	_ resource.Resource                = &roleMappingAWSResource{}
-	_ resource.ResourceWithConfigure   = &roleMappingAWSResource{}
-	_ resource.ResourceWithImportState = &roleMappingAWSResource{}
+	_ resource.Resource              = &awsRoleMappingResource{}
+	_ resource.ResourceWithConfigure = &awsRoleMappingResource{}
 )
 
-type roleMappingAWSResource struct {
+type awsRoleMappingResource struct {
 	client *util.Client
 }
 
-func NewRoleMappingAWSResource() resource.Resource {
-	return &roleMappingAWSResource{}
+func NewAWSRoleMappingResource() resource.Resource {
+	return &awsRoleMappingResource{}
 }
 
-type roleMappingAWSResourceModel struct {
+type awsRoleMappingResourceModel struct {
 	Id         types.String `tfsdk:"id"`
 	Name       types.String `tfsdk:"name"`
 	RoleId     types.String `tfsdk:"role_id"`
 	AWSRoleArn types.String `tfsdk:"aws_role_arn"`
 }
 
-func (r *roleMappingAWSResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *awsRoleMappingResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -40,13 +40,13 @@ func (r *roleMappingAWSResource) Configure(ctx context.Context, req resource.Con
 	r.client = req.ProviderData.(*util.Client)
 }
 
-func (r *roleMappingAWSResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_role_mapping_aws"
+func (r *awsRoleMappingResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_aws_role_mapping"
 }
 
-func (r *roleMappingAWSResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *awsRoleMappingResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Tabular Service Account",
+		Description: "Tabular AWS Role Mapping",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Credential ID",
@@ -56,8 +56,8 @@ func (r *roleMappingAWSResource) Schema(ctx context.Context, req resource.Schema
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "Service account name",
-				Required:    true,
+				Description: "",
+				Computed:    true,
 			},
 			"role_id": schema.StringAttribute{
 				Description: "Role ID",
@@ -74,16 +74,8 @@ func (r *roleMappingAWSResource) Schema(ctx context.Context, req resource.Schema
 	}
 }
 
-func (r *roleMappingAWSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	state := roleMappingAWSResourceModel{
-		Id: types.StringValue(req.ID),
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
-}
-
-func (r *roleMappingAWSResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state roleMappingAWSResourceModel
+func (r *awsRoleMappingResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state awsRoleMappingResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -109,21 +101,21 @@ func (r *roleMappingAWSResource) Read(ctx context.Context, req resource.ReadRequ
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *roleMappingAWSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan roleMappingAWSResourceModel
+func (r *awsRoleMappingResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan awsRoleMappingResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	roleMappingAWSName := plan.Name.ValueString()
 	roleId := plan.RoleId.ValueString()
 	awsRoleArn := plan.AWSRoleArn.ValueString()
+	name := fmt.Sprintf("%s-%s", roleId, awsRoleArn)
 
 	roleMappingAWSResponse, _, err := r.client.V2.DefaultAPI.CreateIamRoleMapping(ctx, *r.client.OrganizationId).
 		CreateIamRoleMappingRequest(tabular.CreateIamRoleMappingRequest{
-			Name:       &roleMappingAWSName,
+			Name:       &name,
 			AwsRoleArn: &awsRoleArn,
 			RoleId:     &roleId,
 		}).Execute()
@@ -138,6 +130,8 @@ func (r *roleMappingAWSResource) Create(ctx context.Context, req resource.Create
 		resp.Diagnostics.AddError("Unable to set credential_key", "Unable to set credential_key")
 	}
 
+	plan.Name = types.StringValue(name)
+
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -145,12 +139,12 @@ func (r *roleMappingAWSResource) Create(ctx context.Context, req resource.Create
 	}
 }
 
-func (r *roleMappingAWSResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *awsRoleMappingResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.Diagnostics.AddError("Service Account Update Not Supported", "A service_account update shouldn't be possible; please file an issue with the maintainers")
 }
 
-func (r *roleMappingAWSResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state roleMappingAWSResourceModel
+func (r *awsRoleMappingResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state awsRoleMappingResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	_, err := r.client.V2.DefaultAPI.DeleteServiceAccountCredential(ctx, *r.client.OrganizationId, state.Id.ValueString()).Execute()

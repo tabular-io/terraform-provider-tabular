@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.18.0
 	github.com/hashicorp/terraform-plugin-testing v1.4.0
 	github.com/stretchr/testify v1.8.3
-	github.com/tabular-io/tabular-sdk-go v1.0.4
+	github.com/tabular-io/tabular-sdk-go v1.0.5
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	golang.org/x/oauth2 v0.7.0
 )

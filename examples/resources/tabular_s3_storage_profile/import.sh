@@ -1,0 +1,1 @@
+terraform import tabular_s3_storage_profile.default "my-bucket-name"

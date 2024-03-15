@@ -107,10 +107,6 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 	state.CredentialKey = types.StringValue(credentialKey)
 
-	if credentialSecret, ok := serviceAccount.GetEncodedSecretOk(); ok {
-		state.CredentialSecret = types.StringValue(*credentialSecret)
-	}
-
 	if name, ok := serviceAccount.GetNameOk(); ok {
 		state.Name = types.StringValue(*name)
 	}
@@ -164,7 +160,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 }
 
 func (r *serviceAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Service Account Update Not Supported", "A service_account update shouldn't be possible; please file an issue with the maintainers")
+	resp.Diagnostics.AddError("Service Account Update Not Supported", "A tabular_service_account update shouldn't be possible; please file an issue with the maintainers")
 }
 
 func (r *serviceAccountResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

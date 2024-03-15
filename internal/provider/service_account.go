@@ -65,7 +65,7 @@ func (r *serviceAccountResource) Schema(ctx context.Context, req resource.Schema
 				Required:    true,
 			},
 			"credential_key": schema.StringAttribute{
-				Description: "Credential ID",
+				Description: "Credential Key",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

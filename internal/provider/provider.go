@@ -205,6 +205,7 @@ func (p *TabularProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewComputeConfigDataSource,
 		NewWarehouseDataSource,
 		NewRoleDataSource,
+		NewS3StorageProfileDataSource,
 	}
 }
 

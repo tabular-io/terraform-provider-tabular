@@ -34,3 +34,11 @@ resource "tabular_s3_storage_profile" "default" {
 
 - `external_id` (String) External ID
 - `id` (String) Storage Profile UUID
+
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+terraform import tabular_s3_storage_profile.default "my-bucket-name"
+```

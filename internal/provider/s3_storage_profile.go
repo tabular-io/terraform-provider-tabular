@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &storageProfileS3Resource{}
-	_ resource.ResourceWithConfigure = &storageProfileS3Resource{}
+	_ resource.Resource                = &storageProfileS3Resource{}
+	_ resource.ResourceWithConfigure   = &storageProfileS3Resource{}
+	_ resource.ResourceWithImportState = &storageProfileS3Resource{}
 )
 
 type storageProfileS3Resource struct {
@@ -69,6 +70,27 @@ func (r *storageProfileS3Resource) Schema(ctx context.Context, req resource.Sche
 			},
 		},
 	}
+}
+
+func (r *storageProfileS3Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	bucketName := types.StringValue(req.ID)
+
+	getStorageProfileResp, _, err := r.client.V2.DefaultAPI.GetStorageProfile(ctx, *r.client.OrganizationId, bucketName.ValueString()).Type_("name").Execute()
+
+	if err != nil {
+		resp.Diagnostics.AddError("Error getting storage profile", "Could not get storage profile "+err.Error())
+		return
+	}
+
+	state := storageProfileS3ResourceModel{
+		Id:         types.StringValue(*getStorageProfileResp.Id),
+		Region:     types.StringValue(*getStorageProfileResp.Region),
+		Bucket:     types.StringValue(*getStorageProfileResp.Bucket),
+		RoleArn:    types.StringValue(*getStorageProfileResp.RoleArn),
+		ExternalId: types.StringValue(*getStorageProfileResp.ExternalId),
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 }
 
 func (r *storageProfileS3Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

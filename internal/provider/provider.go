@@ -196,6 +196,7 @@ func (p *TabularProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewStorageProfileS3Resource,
 		NewRoleWarehouseGrantsResource,
 		NewServiceAccountResource,
+		NewAWSRoleMappingResource,
 	}
 }
 

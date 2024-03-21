@@ -86,6 +86,7 @@ func (r *awsRoleMappingResource) Read(ctx context.Context, req resource.ReadRequ
 	roleMappingAWS, _, err := r.client.V2.DefaultAPI.GetCredential(ctx, *r.client.OrganizationId, credentialKey).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read service account", "Unable to read service account "+err.Error())
+		return
 	}
 
 	state.Id = types.StringValue(credentialKey)

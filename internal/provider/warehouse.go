@@ -86,6 +86,7 @@ func (r *warehouseResource) Read(ctx context.Context, req resource.ReadRequest, 
 	warehouse, _, err := r.client.V2.DefaultAPI.GetWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting warehouse", "Could not get warehouse "+err.Error())
+		return
 	}
 
 	if storageProfileId, ok := warehouse.GetStorageProfileOk(); ok {

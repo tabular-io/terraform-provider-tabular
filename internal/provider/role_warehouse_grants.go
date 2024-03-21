@@ -99,6 +99,7 @@ func (r *roleWarehouseGrantsResource) Read(ctx context.Context, req resource.Rea
 	warehouseGrants, _, err := r.client.V2.DefaultAPI.ListWarehouseRoleGrantsForRole(ctx, *r.client.OrganizationId, warehouseId, roleId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting role grants", "Could not get grants for warehouse "+err.Error())
+		return
 	}
 
 	var privileges []string

@@ -105,6 +105,7 @@ func (r *storageProfileS3Resource) Read(ctx context.Context, req resource.ReadRe
 	storageProfile, _, err := r.client.V2.DefaultAPI.GetStorageProfile(ctx, *r.client.OrganizationId, storageProfileId).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting storage profile", "Could not get storage profile "+err.Error())
+		return
 	}
 
 	if region, ok := storageProfile.GetRegionOk(); ok {

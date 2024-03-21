@@ -103,6 +103,7 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	serviceAccount, _, err := r.client.V2.DefaultAPI.GetCredential(ctx, *r.client.OrganizationId, credentialKey).Execute()
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read service account", "Unable to read service account "+err.Error())
+		return
 	}
 
 	state.CredentialKey = types.StringValue(credentialKey)

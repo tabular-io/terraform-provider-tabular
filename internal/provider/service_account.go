@@ -137,6 +137,7 @@ func (r *serviceAccountResource) Create(ctx context.Context, req resource.Create
 
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating service account", "Unable to create service account "+err.Error())
+		return
 	}
 
 	if id, ok := serviceAccountResponse.GetCredentialIdOk(); ok {

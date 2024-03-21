@@ -121,7 +121,8 @@ func (r *awsRoleMappingResource) Create(ctx context.Context, req resource.Create
 		}).Execute()
 
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating service account", "Unable to create service account "+err.Error())
+		resp.Diagnostics.AddError("Error creating AWS IAM role mapping", "Unable to create AWS IAM role mapping "+err.Error())
+		return
 	}
 
 	if id, ok := roleMappingAWSResponse.GetCredentialIdOk(); ok {

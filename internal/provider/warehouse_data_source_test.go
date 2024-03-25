@@ -43,9 +43,9 @@ resource "tabular_warehouse" "test" {
 }
 
 data "tabular_warehouse" "test" {
- name = "%s"
+ name = tabular_warehouse.test.name
 }
-`, bucketName, roleArn, name, name)
+`, bucketName, roleArn, name)
 }
 
 func TestAccWarehouseDataSourceById(t *testing.T) {

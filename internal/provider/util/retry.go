@@ -30,7 +30,7 @@ func RetryResourceResponse[T any](operationWithResourceResponse operationWithRes
 	return resourceResponse.Resource, resourceResponse.Response, err
 }
 
-// For requests that just resturn a response and an error
+// For requests that just return a response and an error
 func RetryResponse(operationWithData backoff.OperationWithData[*http.Response]) (*http.Response, error) {
 	return backoff.RetryWithData[*http.Response](operationWithData, backoff.NewExponentialBackOff())
 }

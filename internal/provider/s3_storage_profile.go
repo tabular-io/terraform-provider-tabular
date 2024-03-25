@@ -75,7 +75,8 @@ func (r *storageProfileS3Resource) Schema(ctx context.Context, req resource.Sche
 func (r *storageProfileS3Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	bucketName := types.StringValue(req.ID)
 
-	getStorageProfileResp, _, err := util.RetryResourceResponse[*tabular.GetStorageProfileResponse](r.client.V2.DefaultAPI.GetStorageProfile(ctx, *r.client.OrganizationId, bucketName.ValueString()).Type_("name").Execute)
+	retryFunc := util.RetryResourceResponse[*tabular.GetStorageProfileResponse]
+	getStorageProfileResp, _, err := retryFunc(r.client.V2.DefaultAPI.GetStorageProfile(ctx, *r.client.OrganizationId, bucketName.ValueString()).Type_("name").Execute)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting storage profile", "Could not get storage profile "+err.Error())
@@ -102,7 +103,8 @@ func (r *storageProfileS3Resource) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	storageProfileId := state.Id.ValueString()
-	storageProfile, _, err := util.RetryResourceResponse[*tabular.GetStorageProfileResponse](r.client.V2.DefaultAPI.GetStorageProfile(ctx, *r.client.OrganizationId, storageProfileId).Execute)
+	retryFunc := util.RetryResourceResponse[*tabular.GetStorageProfileResponse]
+	storageProfile, _, err := retryFunc(r.client.V2.DefaultAPI.GetStorageProfile(ctx, *r.client.OrganizationId, storageProfileId).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting storage profile", "Could not get storage profile "+err.Error())
 		return
@@ -146,7 +148,8 @@ func (r *storageProfileS3Resource) Create(ctx context.Context, req resource.Crea
 	s3Bucket := plan.Bucket.ValueString()
 	iamRoleArn := plan.RoleArn.ValueString()
 
-	storageProfileResponse, _, err := util.RetryResourceResponse[*tabular.CreateS3StorageProfileResponse](r.client.V2.DefaultAPI.CreateStorageProfile(ctx, *r.client.OrganizationId).
+	retryFunc := util.RetryResourceResponse[*tabular.CreateS3StorageProfileResponse]
+	storageProfileResponse, _, err := retryFunc(r.client.V2.DefaultAPI.CreateStorageProfile(ctx, *r.client.OrganizationId).
 		CreateS3StorageProfileRequest(tabular.CreateS3StorageProfileRequest{
 			Region:  &region,
 			Bucket:  &s3Bucket,

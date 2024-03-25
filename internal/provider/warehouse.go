@@ -83,8 +83,9 @@ func (r *warehouseResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
+	retryFunc := util.RetryResourceResponse[*tabular.GetWarehouseResponse]
 	warehouseId := state.Id.ValueString()
-	warehouse, _, err := util.RetryResourceResponse[*tabular.GetWarehouseResponse](
+	warehouse, _, err := retryFunc(
 		r.client.V2.DefaultAPI.GetWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute,
 	)
 	if err != nil {
@@ -116,8 +117,9 @@ func (r *warehouseResource) Create(ctx context.Context, req resource.CreateReque
 	warehouseName := plan.Name.ValueString()
 	storageProfileId := plan.StorageProfile.ValueString()
 
+	retryFunc := util.RetryResourceResponse[*tabular.CreateWarehouseResponse]
 	apiCreateWarehouseRequest := r.client.V2.DefaultAPI.CreateWarehouse(ctx, *r.client.OrganizationId)
-	warehouseResponse, _, err := util.RetryResourceResponse[*tabular.CreateWarehouseResponse](apiCreateWarehouseRequest.
+	warehouseResponse, _, err := retryFunc(apiCreateWarehouseRequest.
 		CreateWarehouseRequest(tabular.CreateWarehouseRequest{
 			Name:             &warehouseName,
 			StorageProfileId: &storageProfileId,

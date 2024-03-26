@@ -83,7 +83,8 @@ func (r *awsRoleMappingResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	credentialKey := state.Id.ValueString()
-	roleMappingAWS, _, err := r.client.V2.DefaultAPI.GetCredential(ctx, *r.client.OrganizationId, credentialKey).Execute()
+	retryFunc := util.RetryResourceResponse[*tabular.GetCredentialResponse]
+	roleMappingAWS, _, err := retryFunc(r.client.V2.DefaultAPI.GetCredential(ctx, *r.client.OrganizationId, credentialKey).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read service account", "Unable to read service account "+err.Error())
 		return
@@ -149,7 +150,7 @@ func (r *awsRoleMappingResource) Delete(ctx context.Context, req resource.Delete
 	var state awsRoleMappingResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
-	_, err := r.client.V2.DefaultAPI.DeleteServiceAccountCredential(ctx, *r.client.OrganizationId, state.Id.ValueString()).Execute()
+	_, err := util.RetryResponse(r.client.V2.DefaultAPI.DeleteServiceAccountCredential(ctx, *r.client.OrganizationId, state.Id.ValueString()).Execute)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting roleMappingAWS", "Unable to delete roleMappingAWS "+err.Error())

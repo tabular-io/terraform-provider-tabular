@@ -141,10 +141,10 @@ func (r *databaseResource) UpgradeState(ctx context.Context) map[int64]resource.
 				if resp.Diagnostics.HasError() {
 					return
 				}
-
-				databaseResp, _, err := r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId,
+				retryFunc := util.RetryResourceResponse[*tabular.GetDatabaseResponse]
+				databaseResp, _, err := retryFunc(r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId,
 					priorStateData.WarehouseId.ValueString(),
-					priorStateData.Name.ValueString()).Execute()
+					priorStateData.Name.ValueString()).Execute)
 
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to fetch database id for %s", priorStateData.Name.ValueString())
@@ -173,7 +173,8 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	warehouseId := state.WarehouseId.ValueString()
 	databaseId := state.Id.ValueString()
-	database, _, err := r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Type_("id").Execute()
+	retryFunc := util.RetryResourceResponse[*tabular.GetDatabaseResponse]
+	database, _, err := retryFunc(r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Type_("id").Execute)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error fetching database",
@@ -245,7 +246,7 @@ func (r *databaseResource) Delete(ctx context.Context, req resource.DeleteReques
 	databaseId := data.Id.ValueString()
 	warehouseId := data.WarehouseId.ValueString()
 
-	_, err := r.client.V2.DefaultAPI.DeleteDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Execute()
+	_, err := util.RetryResponse(r.client.V2.DefaultAPI.DeleteDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting database", err.Error())
 		return

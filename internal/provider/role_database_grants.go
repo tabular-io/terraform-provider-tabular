@@ -117,7 +117,8 @@ func (r *roleDatabaseGrantsResource) ImportState(ctx context.Context, req resour
 	if len(parts) != 3 {
 		resp.Diagnostics.AddError("Invalid role database grant specifier", "Expected warehouseId/databaseId/roleName")
 	}
-	roleResp, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, parts[2]).Execute()
+	retryFunc := util.RetryResourceResponse[*tabular.GetRoleResponse]
+	roleResp, _, err := retryFunc(r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, parts[2]).Execute)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to fetch role id for %s", parts[2])
@@ -191,7 +192,8 @@ func (r *roleDatabaseGrantsResource) UpgradeState(ctx context.Context) map[int64
 					return
 				}
 
-				roleResp, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, priorStateData.RoleName.ValueString()).Execute()
+				roleRetryFunc := util.RetryResourceResponse[*tabular.GetRoleResponse]
+				roleResp, _, err := roleRetryFunc(r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, priorStateData.RoleName.ValueString()).Execute)
 
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to fetch role id for %s", priorStateData.RoleName.ValueString())
@@ -200,9 +202,10 @@ func (r *roleDatabaseGrantsResource) UpgradeState(ctx context.Context) map[int64
 
 				roleId := roleResp.Id
 
-				databaseResp, _, err := r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId,
+				dbRetryFunc := util.RetryResourceResponse[*tabular.GetDatabaseResponse]
+				databaseResp, _, err := dbRetryFunc(r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId,
 					priorStateData.WarehouseId.ValueString(),
-					priorStateData.Database.ValueString()).Execute()
+					priorStateData.Database.ValueString()).Execute)
 
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to fetch database id for %s", priorStateData.Database.ValueString())
@@ -237,7 +240,8 @@ func (r *roleDatabaseGrantsResource) Read(ctx context.Context, req resource.Read
 	warehouseId := state.WarehouseId.ValueString()
 	databaseId := state.DatabaseId.ValueString()
 	roleId := state.RoleId.ValueString()
-	databaseGrants, _, err := r.client.V2.DefaultAPI.ListDatabaseRoleGrantsForRole(ctx, *r.client.OrganizationId, warehouseId, databaseId, roleId).Execute()
+	retryFunc := util.RetryResourceResponse[*tabular.GetRoleDatabaseGrantsResponse]
+	databaseGrants, _, err := retryFunc(r.client.V2.DefaultAPI.ListDatabaseRoleGrantsForRole(ctx, *r.client.OrganizationId, warehouseId, databaseId, roleId).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Error fetching grants for role", err.Error())
 		return

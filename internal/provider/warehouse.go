@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -82,8 +83,11 @@ func (r *warehouseResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
+	retryFunc := util.RetryResourceResponse[*tabular.GetWarehouseResponse]
 	warehouseId := state.Id.ValueString()
-	warehouse, _, err := r.client.V2.DefaultAPI.GetWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute()
+	warehouse, _, err := retryFunc(
+		r.client.V2.DefaultAPI.GetWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute,
+	)
 	if err != nil {
 		resp.Diagnostics.AddError("Error getting warehouse", "Could not get warehouse "+err.Error())
 		return
@@ -112,7 +116,9 @@ func (r *warehouseResource) Create(ctx context.Context, req resource.CreateReque
 
 	warehouseName := plan.Name.ValueString()
 	storageProfileId := plan.StorageProfile.ValueString()
-	warehouseResponse, _, err := r.client.V2.DefaultAPI.CreateWarehouse(ctx, *r.client.OrganizationId).
+
+	apiCreateWarehouseRequest := r.client.V2.DefaultAPI.CreateWarehouse(ctx, *r.client.OrganizationId)
+	warehouseResponse, _, err := apiCreateWarehouseRequest.
 		CreateWarehouseRequest(tabular.CreateWarehouseRequest{
 			Name:             &warehouseName,
 			StorageProfileId: &storageProfileId,
@@ -145,7 +151,7 @@ func (r *warehouseResource) Delete(ctx context.Context, req resource.DeleteReque
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	warehouseId := state.Id.ValueString()
-	_, err := r.client.V2.DefaultAPI.DeleteWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute()
+	_, err := util.RetryResponse(r.client.V2.DefaultAPI.DeleteWarehouse(ctx, *r.client.OrganizationId, warehouseId).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting warehouse", "Unable to delete warehouse "+err.Error())
 	}

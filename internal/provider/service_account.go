@@ -100,7 +100,8 @@ func (r *serviceAccountResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	credentialKey := state.Id.ValueString()
-	serviceAccount, _, err := r.client.V2.DefaultAPI.GetCredential(ctx, *r.client.OrganizationId, credentialKey).Execute()
+	retryFunc := util.RetryResourceResponse[*tabular.GetCredentialResponse]
+	serviceAccount, _, err := retryFunc(r.client.V2.DefaultAPI.GetCredential(ctx, *r.client.OrganizationId, credentialKey).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to read service account", "Unable to read service account "+err.Error())
 		return
@@ -169,7 +170,7 @@ func (r *serviceAccountResource) Delete(ctx context.Context, req resource.Delete
 	var state serviceAccountResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
-	_, err := r.client.V2.DefaultAPI.DeleteServiceAccountCredential(ctx, *r.client.OrganizationId, state.CredentialKey.ValueString()).Execute()
+	_, err := util.RetryResponse(r.client.V2.DefaultAPI.DeleteServiceAccountCredential(ctx, *r.client.OrganizationId, state.CredentialKey.ValueString()).Execute)
 
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting serviceAccount", "Unable to delete serviceAccount "+err.Error())

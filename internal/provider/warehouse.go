@@ -117,13 +117,12 @@ func (r *warehouseResource) Create(ctx context.Context, req resource.CreateReque
 	warehouseName := plan.Name.ValueString()
 	storageProfileId := plan.StorageProfile.ValueString()
 
-	retryFunc := util.RetryResourceResponse[*tabular.CreateWarehouseResponse]
 	apiCreateWarehouseRequest := r.client.V2.DefaultAPI.CreateWarehouse(ctx, *r.client.OrganizationId)
-	warehouseResponse, _, err := retryFunc(apiCreateWarehouseRequest.
+	warehouseResponse, _, err := apiCreateWarehouseRequest.
 		CreateWarehouseRequest(tabular.CreateWarehouseRequest{
 			Name:             &warehouseName,
 			StorageProfileId: &storageProfileId,
-		}).Execute)
+		}).Execute()
 
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating storage profile", "Unable to create storage profile "+err.Error())

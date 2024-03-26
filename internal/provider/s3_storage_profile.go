@@ -148,13 +148,12 @@ func (r *storageProfileS3Resource) Create(ctx context.Context, req resource.Crea
 	s3Bucket := plan.Bucket.ValueString()
 	iamRoleArn := plan.RoleArn.ValueString()
 
-	retryFunc := util.RetryResourceResponse[*tabular.CreateS3StorageProfileResponse]
-	storageProfileResponse, _, err := retryFunc(r.client.V2.DefaultAPI.CreateStorageProfile(ctx, *r.client.OrganizationId).
+	storageProfileResponse, _, err := r.client.V2.DefaultAPI.CreateStorageProfile(ctx, *r.client.OrganizationId).
 		CreateS3StorageProfileRequest(tabular.CreateS3StorageProfileRequest{
 			Region:  &region,
 			Bucket:  &s3Bucket,
 			RoleArn: &iamRoleArn,
-		}).Execute)
+		}).Execute()
 
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating storage profile", "Unable to create storage profile "+err.Error())

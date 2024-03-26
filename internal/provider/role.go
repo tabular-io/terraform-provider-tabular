@@ -82,7 +82,8 @@ func (r *roleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	roleName := state.Name.ValueString()
-	role, _, err := r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, roleName).Execute()
+	retryFunc := util.RetryResourceResponse[*tabular.GetRoleResponse]
+	role, _, err := retryFunc(r.client.V2.DefaultAPI.GetRole(ctx, *r.client.OrganizationId, roleName).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Error fetching role", "Could not fetch role "+roleName+": "+err.Error())
 		return
@@ -157,7 +158,7 @@ func (r *roleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	forceDestroy := data.ForceDestroy.ValueBool()
 	roleName := data.Name.ValueString()
-	_, err := r.client.V2.DefaultAPI.DeleteRole(ctx, *r.client.OrganizationId, roleName).Force(forceDestroy).Execute()
+	_, err := util.RetryResponse(r.client.V2.DefaultAPI.DeleteRole(ctx, *r.client.OrganizationId, roleName).Force(forceDestroy).Execute)
 	if err != nil {
 		resp.Diagnostics.AddError("Error deleting role", "Something went wrong. Does the role still have any users/roles/permissions attached to it? Err: "+err.Error())
 		return

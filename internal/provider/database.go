@@ -95,9 +95,10 @@ func (r *databaseResource) Schema(ctx context.Context, req resource.SchemaReques
 }
 
 func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, "/", 1)
+	parts := strings.SplitN(req.ID, "/", 2)
 	if len(parts) != 2 {
 		resp.Diagnostics.AddError("Could not parse ", "Expected warehouseId/databaseId")
+		return
 	}
 	state := databaseResourceModel{
 		WarehouseId: types.StringValue(parts[0]),

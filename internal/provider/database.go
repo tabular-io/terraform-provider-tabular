@@ -192,7 +192,7 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	databaseId := state.Id.ValueString()
 	retryFunc := util.RetryResourceResponse[*tabular.GetDatabaseResponse]
 	database, httpResponse, err := retryFunc(r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Type_("id").Execute)
-	if err != nil || (httpResponse != nil && httpResponse.StatusCode != 404) {
+	if err != nil && !(httpResponse != nil && httpResponse.StatusCode == 404) {
 		resp.Diagnostics.AddError(
 			"Error fetching database",
 			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", databaseId, warehouseId, err.Error()),

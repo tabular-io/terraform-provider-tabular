@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -100,9 +101,24 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 		resp.Diagnostics.AddError("Could not parse ", "Expected warehouseId/databaseId")
 		return
 	}
+	warehouseId := parts[0]
+	databaseId := parts[1]
+
+	_, warehouseIdErr := uuid.Parse(warehouseId)
+	if warehouseIdErr != nil {
+		resp.Diagnostics.AddError("Invalid Warehouse ID", warehouseIdErr.Error())
+	}
+	_, databaseIdErr := uuid.Parse(databaseId)
+	if databaseIdErr != nil {
+		resp.Diagnostics.AddError("Invalid Database ID", databaseIdErr.Error())
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	state := databaseResourceModel{
-		WarehouseId: types.StringValue(parts[0]),
-		Id:          types.StringValue(parts[1]),
+		WarehouseId: types.StringValue(warehouseId),
+		Id:          types.StringValue(databaseId),
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
@@ -175,19 +191,20 @@ func (r *databaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	warehouseId := state.WarehouseId.ValueString()
 	databaseId := state.Id.ValueString()
 	retryFunc := util.RetryResourceResponse[*tabular.GetDatabaseResponse]
-	database, _, err := retryFunc(r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Type_("id").Execute)
-	if err != nil {
+	database, httpResponse, err := retryFunc(r.client.V2.DefaultAPI.GetDatabase(ctx, *r.client.OrganizationId, warehouseId, databaseId).Type_("id").Execute)
+	if err != nil || (httpResponse != nil && httpResponse.StatusCode != 404) {
 		resp.Diagnostics.AddError(
 			"Error fetching database",
 			fmt.Sprintf("Could not fetch database %s in warehouse %s: %s", databaseId, warehouseId, err.Error()),
 		)
 		return
 	}
-	if database.Id == nil {
+	if database == nil {
 		resp.State.RemoveResource(ctx)
 		return
 	}
 
+	state.Name = types.StringValue(*database.Name)
 	value, ok := (*database.Properties)["location"]
 	if !ok {
 		resp.Diagnostics.AddError("Database in unexpected state", "Database did not have location table property set")

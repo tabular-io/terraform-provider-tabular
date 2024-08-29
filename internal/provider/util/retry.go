@@ -28,8 +28,8 @@ func getExponentialBackOff() *backoff.ExponentialBackOff {
 		InitialInterval:     backoff.DefaultInitialInterval,
 		RandomizationFactor: backoff.DefaultRandomizationFactor,
 		Multiplier:          2,
-		MaxInterval:         backoff.DefaultMaxInterval,
-		MaxElapsedTime:      5 * time.Minute,
+		MaxInterval:         30 * time.Second,
+		MaxElapsedTime:      2 * time.Minute,
 		Stop:                backoff.Stop,
 		Clock:               backoff.SystemClock,
 	}
@@ -40,7 +40,14 @@ func getExponentialBackOff() *backoff.ExponentialBackOff {
 // For requests that return resource info, a response and a error
 // This function combines that into one struct so the retry library can be used and then flattens before returning
 func RetryResourceResponse[T any](operationWithResourceResponse operationWithResourceResponseData[T]) (T, *http.Response, error) {
-	rro := resourceResponseOperation[T]{operationWithResourceResponse}
+	rro := resourceResponseOperation[T]{func() (T, *http.Response, error) {
+		response, httpResponse, err := operationWithResourceResponse()
+		statusCode := httpResponse.StatusCode
+		if err != nil && statusCode >= 400 && statusCode < 500 {
+			return response, httpResponse, backoff.Permanent(err)
+		}
+		return response, httpResponse, err
+	}}
 	resourceResponse, err := backoff.RetryWithData[resourceResponse[T]](rro.Execute, getExponentialBackOff())
 	return resourceResponse.Resource, resourceResponse.Response, err
 }
